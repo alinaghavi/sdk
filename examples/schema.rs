@@ -72,6 +72,7 @@ fn main() {
         harness::HookRead,
         harness::HookMoment,
         harness::Moment,
+        harness::Suggestion,
         harness::SessionRef,
         harness::HookAnswer,
         harness::Answer,

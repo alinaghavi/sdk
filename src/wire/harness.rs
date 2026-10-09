@@ -699,9 +699,21 @@ pub struct Moment {
     /// The share of the context window left, 0 to 1.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub context_left: Option<f64>,
-    /// At a `permission`: the harness's own ways to allow such calls from now on.
+    /// At a `permission`: the harness's own ways to allow such calls from now on, in its
+    /// order; `always: {suggestion: n}` is the n-th.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub suggestions: Vec<Value>,
+    pub suggestions: Vec<Suggestion>,
+}
+
+/// One of the harness's own ways to allow such calls from now on, as a person reads it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Suggestion {
+    /// What a person reads for it: `Always Bash(cargo check:*)`.
+    pub label: String,
+    /// One line on how far it reaches: `this project, for you`.
+    pub about: String,
 }
 
 /// A conversation, by its driver and its id.
