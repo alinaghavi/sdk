@@ -311,7 +311,10 @@ pub fn bound(method: &str) -> Duration {
         method::STOP => 2_800,
         method::RECAP => 40_000,
         method::SERVICE_PLAN => 5_000,
-        method::SANDBOX_ENSURE | method::SANDBOX_START => 300_000,
+        method::SANDBOX_ENSURE
+        | method::SANDBOX_START
+        | method::SANDBOX_ARCHIVE
+        | method::SANDBOX_PUT => 300_000,
         method::SANDBOXES_LIST => 60_000,
         method if method.starts_with("process/") => 5_000,
         method if method.starts_with("sandbox/") => 60_000,
