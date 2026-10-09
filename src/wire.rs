@@ -65,12 +65,11 @@ pub struct Initialized {
 }
 
 impl Initialized {
-    /// What the shapes cannot say themselves (PROTOCOL.md §3): the id is kebab-case, the
-    /// kind answers its own object and not the other's, a driver's levels each follow the
-    /// one they need and `live` comes exactly with a door, its executables are named, and
-    /// its hook events are unique. The first rule broken, in one line.
+    /// What the shapes cannot say themselves (PROTOCOL.md §3): the kind answers its own
+    /// object and not the other's, a driver's levels each follow the one they need and
+    /// `live` comes exactly with a door, its executables are named, and its hook events are
+    /// unique. The first rule broken, in one line. The id checks itself ([`ProgramId`]).
     pub fn check(&self) -> Result<(), String> {
-        kebab(&self.program.id)?;
         match (self.program.kind, &self.harness, &self.machine) {
             (Kind::Harness, Some(harness), None) => harness.check(),
             (Kind::Machine, None, Some(_)) => Ok(()),
@@ -109,21 +108,105 @@ impl HarnessInfo {
     }
 }
 
-/// Lowercase kebab-case, at most 64 characters.
-fn kebab(id: &str) -> Result<(), String> {
-    let kebab = id.len() <= 64
-        && id.split('-').all(|word| {
-            !word.is_empty()
-                && word
-                    .bytes()
-                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
-        });
-    if kebab {
-        Ok(())
-    } else {
-        Err(format!(
-            "`{id}` is not lowercase kebab-case of at most 64 characters"
-        ))
+/// A program's id (PROTOCOL.md §3): lowercase kebab-case, at most 64 characters. For a
+/// driver it is the harness's id, what `Session.harness` names. Made only through
+/// [`ProgramId::try_from`] or [`str::parse`], so one that is held is valid; on the wire it
+/// is a plain string, and a bad one does not deserialize.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ProgramId(String);
+
+impl ProgramId {
+    /// The longest id.
+    pub const MAX: usize = 64;
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ProgramId {
+    type Error = String;
+
+    fn try_from(id: String) -> Result<Self, String> {
+        let kebab = id.len() <= Self::MAX
+            && id.split('-').all(|word| {
+                !word.is_empty()
+                    && word
+                        .bytes()
+                        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+            });
+        if kebab {
+            Ok(Self(id))
+        } else {
+            Err(format!(
+                "`{id}` is not lowercase kebab-case of at most {} characters",
+                Self::MAX
+            ))
+        }
+    }
+}
+
+impl std::str::FromStr for ProgramId {
+    type Err = String;
+
+    fn from_str(id: &str) -> Result<Self, String> {
+        Self::try_from(id.to_owned())
+    }
+}
+
+impl From<ProgramId> for String {
+    fn from(id: ProgramId) -> Self {
+        id.0
+    }
+}
+
+impl AsRef<str> for ProgramId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::borrow::Borrow<str> for ProgramId {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for ProgramId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl PartialEq<str> for ProgramId {
+    fn eq(&self, other: &str) -> bool {
+        self.0 == other
+    }
+}
+
+impl PartialEq<&str> for ProgramId {
+    fn eq(&self, other: &&str) -> bool {
+        self.0 == *other
+    }
+}
+
+#[cfg(feature = "schema")]
+impl schemars::JsonSchema for ProgramId {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "ProgramId".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": Self::MAX,
+        })
     }
 }
 
@@ -132,9 +215,9 @@ fn kebab(id: &str) -> Result<(), String> {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ProgramInfo {
-    /// Lowercase kebab-case, at most 64 characters: what `Session.harness` names for a
-    /// driver. A found program cannot take an official one's id.
-    pub id: String,
+    /// What `Session.harness` names for a driver. A found program cannot take an official
+    /// one's id.
+    pub id: ProgramId,
     /// Driver or adapter.
     pub kind: Kind,
     /// The program's own release.
