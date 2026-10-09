@@ -44,6 +44,7 @@ fn main() {
         harness::Says,
         harness::Setup,
         harness::Planned,
+        harness::Install,
         harness::Found,
         harness::Entry,
         harness::Format,
