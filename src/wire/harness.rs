@@ -840,7 +840,7 @@ pub struct Look {
     /// A process running as the harness that nothing answers for may hold it without
     /// holding a transcript open.
     pub strays: bool,
-    /// A process holding or naming the transcripts with one of these arguments is
+    /// A process holding or naming the transcripts that one of these matches is
     /// somewhere the runtime cannot reach, and is never signalled.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub beyond: Vec<Beyond>,
@@ -851,8 +851,9 @@ pub struct Look {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Beyond {
-    /// An argument exactly equal to this.
-    pub arg: String,
+    /// An argument exactly equal to this; absent: every process found this way.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arg: Option<String>,
     /// What the holder reads, `{"beyond": line}`.
     pub line: String,
 }
@@ -1143,12 +1144,13 @@ pub struct Stop {
     pub holder: Holder,
 }
 
-/// Whether `stop` ended a turn.
+/// What `stop`'s graceful step did.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Stopped {
-    /// A turn ran and ended; false: nothing ran.
+    /// This step ended the turn. For a `process` holder the runtime signals it after,
+    /// wherever it still runs, whatever this says.
     pub stopped: bool,
     /// The driver's one line of evidence: the turn it ended and the state it reached.
     #[serde(default, skip_serializing_if = "Option::is_none")]
