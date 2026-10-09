@@ -229,7 +229,8 @@ pub struct Session {
     pub created_at: Option<u64>,
     /// When it last changed.
     pub updated_at: u64,
-    /// Every file of it, oldest first; at least one.
+    /// Every file of it on this host, oldest first: at least one where the harness
+    /// keeps transcript files (`HarnessInfo.transcript`), none where it does not.
     pub transcripts: Vec<PathBuf>,
     /// The conversation it was forked from.
     #[serde(default, skip_serializing_if = "Option::is_none")]
