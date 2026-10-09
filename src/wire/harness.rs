@@ -125,6 +125,23 @@ pub struct Planned {
     /// Lines for a person about the setup.
     #[serde(default)]
     pub notes: Vec<String>,
+    /// How the harness is installed here, where it is not (`found` absent) and its
+    /// driver can install it: its vendor's own installer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install: Option<Install>,
+}
+
+/// A harness's vendor's own installer, which the runtime runs only once a person agreed
+/// (at a terminal, or by `steery setup --install`), shown to them as `about` and `argv`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Install {
+    /// What runs, run as is with the person's environment and no standard input.
+    pub argv: Vec<String>,
+    /// One line a person reads before agreeing, holding the exact command line `argv`
+    /// runs and where it installs the harness.
+    pub about: String,
 }
 
 /// An installed harness.
