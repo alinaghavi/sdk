@@ -98,6 +98,9 @@ pub struct Entry {
     pub args: Option<Vec<String>>,
     /// The user it runs as.
     pub user: String,
+    /// The folder it works in now; absent where it cannot be read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
 }
 
 /// `process/environ`: some of a process's environment.

@@ -675,9 +675,6 @@ pub struct Moment {
     /// When it happened.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub at: Option<u64>,
-    /// An id the plugin gives it, so it is read once.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
     /// The folder it runs in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,

@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::harness::{LiveState, Moment, SessionRef};
+use super::harness::{LiveState, SessionRef};
 
 /// The door version this crate speaks.
 pub const DOOR: u32 = 1;
@@ -47,8 +47,15 @@ pub enum PluginFrame {
     },
     /// The whole state, when it changes.
     State { state: LiveState },
-    /// A moment of a hook `via: door`.
-    Moment { id: String, moment: Moment },
+    /// A moment of a hook `via: door`: the harness's own payload, which the runtime reads
+    /// with `hook/read` as it reads a command hook's document. A moment `id` is read once.
+    Moment {
+        id: String,
+        /// The `Hook.event` it is.
+        event: String,
+        /// The harness's hook payload, as the plugin got it.
+        document: Value,
+    },
     /// A turn of the copy's own ended.
     Settle {
         id: String,
