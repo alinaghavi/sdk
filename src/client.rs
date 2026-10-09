@@ -60,7 +60,8 @@ type Pending = Arc<Mutex<Option<HashMap<String, Vec<Waiter>>>>>;
 
 /// A running program.
 pub struct Client {
-    child: Child,
+    /// Locked only to kill it, or to wait for it once it is shut down.
+    child: Mutex<Child>,
     stdin: tokio::sync::Mutex<Option<ChildStdin>>,
     pending: Pending,
     notifications: Mutex<Option<mpsc::UnboundedReceiver<Notification>>>,
@@ -99,7 +100,7 @@ impl Client {
         let (notify, notifications) = mpsc::unbounded_channel();
         let reader = tokio::spawn(read(stdout, pending.clone(), notify));
         Ok(Self {
-            child,
+            child: Mutex::new(child),
             stdin: tokio::sync::Mutex::new(Some(stdin)),
             pending,
             notifications: Mutex::new(Some(notifications)),
@@ -145,8 +146,12 @@ impl Client {
         self.call_as(&id, method, params, within).await
     }
 
-    /// Call `method` under `id`, waiting at most `within`. The same id sent again with the
-    /// same method and parameters is answered from its first result.
+    /// Call `method` under `id`, waiting at most `within` for the request to be written and
+    /// answered together. The same id sent again with the same method and parameters is
+    /// answered from its first result. A request whose writing was cut short, by `within`
+    /// or by its caller, kills the program: half a line is on its input, and one that stops
+    /// reading would hold every later call behind it. Every call in flight then reads
+    /// [`CallError::Closed`], and the next start is a fresh process.
     pub async fn call_as(
         &self,
         id: &str,
@@ -154,6 +159,7 @@ impl Client {
         params: Value,
         within: Duration,
     ) -> Result<Value, CallError> {
+        let deadline = tokio::time::Instant::now() + within;
         let serial = self.next.fetch_add(1, Ordering::Relaxed);
         let (answer, answered) = oneshot::channel();
         {
@@ -169,11 +175,16 @@ impl Client {
         let line = frame::encode(
             &json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }),
         );
-        if self.write(&line).await.is_err() {
+        let written = match tokio::time::timeout_at(deadline, self.write(&line)).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(_)) => Err(CallError::Closed),
+            Err(_) => Err(CallError::Timeout),
+        };
+        if let Err(error) = written {
             self.forget(id, serial);
-            return Err(CallError::Closed);
+            return Err(error);
         }
-        match tokio::time::timeout(within, answered).await {
+        match tokio::time::timeout_at(deadline, answered).await {
             Ok(Ok(answer)) => answer,
             Ok(Err(_)) => Err(CallError::Closed),
             Err(_) => {
@@ -197,32 +208,47 @@ impl Client {
     pub async fn shutdown(mut self) -> std::io::Result<std::process::ExitStatus> {
         let _ = self.ask::<method::Shutdown>(&wire::Empty {}).await;
         drop(self.stdin.lock().await.take());
-        if let Ok(status) = tokio::time::timeout(GRACE, self.child.wait()).await {
+        let child = self.child.get_mut().unwrap_or_else(|e| e.into_inner());
+        if let Ok(status) = tokio::time::timeout(GRACE, child.wait()).await {
             self.reader.abort();
             return status;
         }
         #[cfg(unix)]
-        if let Some(pid) = self.child.id().and_then(|pid| i32::try_from(pid).ok()) {
+        if let Some(pid) = child.id().and_then(|pid| i32::try_from(pid).ok()) {
             // SAFETY: a signal to the child this client started and has not reaped.
             unsafe { libc::kill(pid, libc::SIGTERM) };
-            if let Ok(status) = tokio::time::timeout(GRACE, self.child.wait()).await {
+            if let Ok(status) = tokio::time::timeout(GRACE, child.wait()).await {
                 self.reader.abort();
                 return status;
             }
         }
-        self.child.start_kill()?;
-        let status = self.child.wait().await;
+        child.start_kill()?;
+        let status = child.wait().await;
         self.reader.abort();
         status
     }
 
+    /// Write one whole line to the program's input. Waiting for the input is harmless to
+    /// cut short; the line once begun is written whole or the program is killed ([`Torn`]).
     async fn write(&self, line: &[u8]) -> std::io::Result<()> {
         let mut stdin = self.stdin.lock().await;
         let Some(stdin) = stdin.as_mut() else {
             return Err(std::io::ErrorKind::BrokenPipe.into());
         };
+        let torn = Torn(self);
         stdin.write_all(line).await?;
-        stdin.flush().await
+        stdin.flush().await?;
+        std::mem::forget(torn);
+        Ok(())
+    }
+
+    /// End the program at once: its output closes, so every call in flight reads closed.
+    fn kill(&self) {
+        let _ = self
+            .child
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .start_kill();
     }
 
     fn forget(&self, id: &str, serial: u64) {
@@ -235,6 +261,16 @@ impl Client {
                 pending.remove(id);
             }
         }
+    }
+}
+
+/// A line being written: dropped before it is whole — its call's bound passed, its caller
+/// went, or the write failed — it kills the program, whose input now holds a torn frame.
+struct Torn<'a>(&'a Client);
+
+impl Drop for Torn<'_> {
+    fn drop(&mut self) {
+        self.0.kill();
     }
 }
 
@@ -301,4 +337,50 @@ fn answer(message: &Value) -> Result<Value, CallError> {
         INVALID_CODE => CallError::Invalid(message),
         code => CallError::Remote { code, message },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A program that stops reading its input: a line over the pipe's buffer cannot be
+    /// written whole. Each call still answers within its own bound, a call queued behind
+    /// the stuck one included, and the program is killed, so the next call reads it closed
+    /// and its runtime starts a fresh one.
+    #[tokio::test]
+    async fn a_program_that_stops_reading_answers_each_call_in_its_bound_and_is_killed() {
+        let client = Client::spawn(
+            Path::new("sh"),
+            &["-c".to_owned(), "exec sleep 30".to_owned()],
+            None,
+        )
+        .await
+        .unwrap();
+        let big = json!({ "bytes": "x".repeat(1 << 20) });
+        let began = std::time::Instant::now();
+        let (stuck, queued) = tokio::join!(
+            client.call("host/fs/write", big, Duration::from_millis(600)),
+            async {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                client
+                    .call("process/list", json!({}), Duration::from_millis(300))
+                    .await
+            },
+        );
+        assert!(matches!(stuck, Err(CallError::Timeout)), "{stuck:?}");
+        assert!(matches!(queued, Err(CallError::Timeout)), "{queued:?}");
+        assert!(began.elapsed() < Duration::from_secs(2), "{:?}", began.elapsed());
+
+        let next = client
+            .call("process/list", json!({}), Duration::from_secs(5))
+            .await;
+        assert!(matches!(next, Err(CallError::Closed)), "{next:?}");
+        let exited = client
+            .child
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .try_wait()
+            .unwrap();
+        assert!(exited.is_some(), "the program that held a torn line is killed");
+    }
 }
