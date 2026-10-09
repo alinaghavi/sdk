@@ -109,7 +109,8 @@ impl Client {
     }
 
     /// Send `initialize`, and read what the program is. A program that names a protocol
-    /// version `params` did not offer is [`CallError::Invalid`].
+    /// version `params` did not offer, or breaks a rule [`wire::Initialized::check`]
+    /// reads, is [`CallError::Invalid`].
     pub async fn initialize(
         &self,
         params: &wire::InitializeParams,
@@ -129,6 +130,7 @@ impl Client {
                 initialized.protocol
             )));
         }
+        initialized.check().map_err(CallError::Invalid)?;
         Ok(initialized)
     }
 
@@ -304,21 +306,31 @@ fn answer(message: &Value) -> Result<Value, CallError> {
 }
 
 /// How long the runtime waits for `method`'s answer (PROTOCOL.md §9). A method the table
-/// does not name is given 10 s.
+/// does not name is given 10 s; `host/call` is bounded by [`carried`].
 pub fn bound(method: &str) -> Duration {
     let millis = match method {
         method::SETUP_PLAN | method::MODELS | method::SESSIONS_LIST => 30_000,
+        method::IDLE | method::RECEIPT_FIND => 20_000,
         method::STOP => 2_800,
         method::RECAP => 40_000,
-        method::SERVICE_PLAN => 5_000,
+        method::SERVICE_PLAN | method::SERVICE_STATUS => 10_000,
+        method::SERVICE_START | method::SERVICE_RESTART | method::SERVICE_REMOVE => 30_000,
         method::SANDBOX_ENSURE
         | method::SANDBOX_START
         | method::SANDBOX_ARCHIVE
         | method::SANDBOX_PUT => 300_000,
-        method::SANDBOXES_LIST => 60_000,
+        method::SANDBOXES_LIST | method::STREAM_WRITE => 60_000,
+        method::HOST_HELLO => 10_000,
+        method::HOST_PROGRAMS | method::HOST_DIAL | method::HOST_PING => 30_000,
+        method if method.starts_with("host/fs/") => 30_000,
         method if method.starts_with("process/") => 5_000,
         method if method.starts_with("sandbox/") => 60_000,
         _ => 10_000,
     };
     Duration::from_millis(millis)
+}
+
+/// How long control waits for a `host/call` carrying `method`: its own bound, and 5 s.
+pub fn carried(method: &str) -> Duration {
+    bound(method) + Duration::from_secs(5)
 }

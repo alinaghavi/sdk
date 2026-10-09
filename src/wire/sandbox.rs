@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
     derive(schemars::JsonSchema),
     schemars(rename = "SandboxList")
 )]
+#[serde(deny_unknown_fields)]
 pub struct List {
     /// Only those carrying every one of these labels.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -26,6 +27,7 @@ pub struct List {
     derive(schemars::JsonSchema),
     schemars(rename = "SandboxListed")
 )]
+#[serde(deny_unknown_fields)]
 pub struct Listed {
     /// Each one.
     pub sandboxes: Vec<Sandbox>,
@@ -34,6 +36,7 @@ pub struct Listed {
 /// One sandbox.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Sandbox {
     /// The provider's id for it.
     pub sandbox: String,
@@ -49,6 +52,7 @@ pub struct Sandbox {
 /// `sandbox/ensure`: the sandbox for `key`, made where none is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Ensure {
     /// What finds it again.
     pub key: String,
@@ -63,7 +67,7 @@ pub struct Ensure {
 /// What a sandbox is made from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Source {
     /// A provider's snapshot, by name.
     Snapshot(String),
@@ -74,6 +78,7 @@ pub enum Source {
 /// A sandbox, as `sandbox/ensure` and `sandbox/fork` answer it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Named {
     /// The provider's id for it.
     pub sandbox: String,
@@ -86,6 +91,7 @@ pub type Target = Named;
 /// A sandbox's state after `sandbox/start`, `stop`, `delete`, `archive` or `pause`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct State {
     /// In the provider's own word.
     pub state: String,
@@ -94,6 +100,7 @@ pub struct State {
 /// `sandbox/put`: write a file into a sandbox. Its result is [`super::Empty`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Put {
     /// The provider's id for the sandbox.
     pub sandbox: String,
@@ -112,6 +119,7 @@ pub struct Put {
     derive(schemars::JsonSchema),
     schemars(rename = "SandboxChannel")
 )]
+#[serde(deny_unknown_fields)]
 pub struct Channel {
     /// The provider's id for the sandbox.
     pub sandbox: String,
@@ -122,7 +130,7 @@ pub struct Channel {
 /// How a channel reaches its command.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(untagged)]
+#[serde(untagged, deny_unknown_fields)]
 pub enum Reach {
     /// A local command whose standard input and output are the channel.
     Argv {
@@ -138,6 +146,7 @@ pub enum Reach {
 /// `stream/write`: the runtime's bytes for a channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct StreamWrite {
     /// The channel.
     pub stream: String,
@@ -148,6 +157,7 @@ pub struct StreamWrite {
 /// `stream/close`: the runtime ends a channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct StreamClose {
     /// The channel.
     pub stream: String,
@@ -156,6 +166,7 @@ pub struct StreamClose {
 /// `stream/data`: the command's bytes, as the adapter sends them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct StreamData {
     /// The channel.
     pub stream: String,
@@ -166,6 +177,7 @@ pub struct StreamData {
 /// `stream/closed`: a channel ended, as the adapter says.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct StreamClosed {
     /// The channel.
     pub stream: String,

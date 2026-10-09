@@ -9,13 +9,14 @@ use serde::{Deserialize, Serialize};
 /// Two readings of one process's start time this close are the same start.
 pub const SAME_START_MS: u64 = 10_000;
 
-/// `process/start`: start a process detached, in a process group of its own.
+/// `process/start`: start a process detached, in a session and process group of its own.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
     schemars(rename = "ProcessStart")
 )]
+#[serde(deny_unknown_fields)]
 pub struct Start {
     /// The program and its arguments.
     pub argv: Vec<String>,
@@ -27,11 +28,11 @@ pub struct Start {
     /// The file its standard input reads; absent: none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stdin: Option<PathBuf>,
-    /// The file its standard output goes to.
+    /// The file its standard output is appended to.
     pub stdout: PathBuf,
-    /// The file its standard error goes to.
+    /// The file its standard error is appended to.
     pub stderr: PathBuf,
-    /// The service scope it runs in.
+    /// The service (its label) whose share of the CPU it runs in, where there is one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
 }
@@ -39,6 +40,7 @@ pub struct Start {
 /// The process `process/start` started.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Started {
     /// Its pid.
     pub pid: u32,
@@ -53,6 +55,7 @@ pub struct Started {
     derive(schemars::JsonSchema),
     schemars(rename = "ProcessList")
 )]
+#[serde(deny_unknown_fields)]
 pub struct List {
     /// Only these; absent: every process.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -66,8 +69,9 @@ pub struct List {
     derive(schemars::JsonSchema),
     schemars(rename = "ProcessListed")
 )]
+#[serde(deny_unknown_fields)]
 pub struct Listed {
-    /// Each one running; a pid asked for that runs nothing is absent.
+    /// Each one running, no zombie; a pid asked for that runs nothing is absent.
     pub processes: Vec<Entry>,
 }
 
@@ -78,6 +82,7 @@ pub struct Listed {
     derive(schemars::JsonSchema),
     schemars(rename = "ProcessEntry")
 )]
+#[serde(deny_unknown_fields)]
 pub struct Entry {
     /// Its pid.
     pub pid: u32,
@@ -87,8 +92,10 @@ pub struct Entry {
     pub process_start: u64,
     /// Its executable's name.
     pub command: String,
-    /// Its arguments, its own name first.
-    pub args: Vec<String>,
+    /// Its arguments, its own name first; absent where they cannot be read, and it may
+    /// then be any program.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub args: Option<Vec<String>>,
     /// The user it runs as.
     pub user: String,
 }
@@ -96,6 +103,7 @@ pub struct Entry {
 /// `process/environ`: some of a process's environment.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Environ {
     /// Its pid.
     pub pid: u32,
@@ -108,6 +116,7 @@ pub struct Environ {
 /// The variables `process/environ` read.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Values {
     /// Each one set, by name; one not set is absent.
     pub values: BTreeMap<String, String>,
@@ -116,6 +125,7 @@ pub struct Values {
 /// `process/files`: the files a process holds open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Files {
     /// Its pid.
     pub pid: u32,
@@ -126,14 +136,43 @@ pub struct Files {
 /// The files `process/files` found open.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Paths {
     /// Each one's absolute path.
     pub paths: Vec<PathBuf>,
 }
 
+/// `process/listening`: the processes listening on a TCP port.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Listening {
+    pub port: u16,
+}
+
+/// The processes `process/listening` found.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Listeners {
+    pub processes: Vec<Listener>,
+}
+
+/// A process listening on a port.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Listener {
+    pub pid: u32,
+    pub process_start: u64,
+    /// Its executable's name.
+    pub command: String,
+}
+
 /// `process/signal`: signal a process, only where the pid still has that start time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Signal {
     /// Its pid.
     pub pid: u32,
@@ -159,15 +198,19 @@ pub enum SignalName {
 /// Whether `process/signal` sent the signal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Sent {
     /// False where the pid no longer has that start time.
     pub sent: bool,
 }
 
-/// `service/plan`: what installs the runtime as a service.
+/// `service/plan`: what installs the runtime as a service. It is pure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct ServicePlan {
+    /// The service's name.
+    pub label: String,
     /// The runtime's binary.
     pub binary: PathBuf,
     /// Its arguments.
@@ -176,13 +219,18 @@ pub struct ServicePlan {
     /// Its environment.
     #[serde(default)]
     pub env: BTreeMap<String, String>,
-    /// The service's name.
-    pub label: String,
+    /// The loopback port whose listener the service manager hands it.
+    pub port: u16,
+    /// Its share, 1 to 100 percent, of what the computer grants its user.
+    pub cpu: u8,
+    /// The file its own output is appended to.
+    pub log: PathBuf,
 }
 
 /// What installs the runtime as a service; the runtime writes and runs it.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct Plan {
     /// The files to write.
     pub files: Vec<PlannedFile>,
@@ -194,6 +242,7 @@ pub struct Plan {
 /// One command of a [`Plan`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct PlanCommand {
     /// The command and its arguments.
     pub argv: Vec<String>,
@@ -205,6 +254,7 @@ pub struct PlanCommand {
 /// One file of a [`Plan`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct PlannedFile {
     /// Its absolute path.
     pub path: PathBuf,
@@ -212,4 +262,31 @@ pub struct PlannedFile {
     pub content: String,
     /// Its Unix mode bits.
     pub mode: u32,
+}
+
+/// `service/status`, `service/start`, `service/restart`, `service/remove`: one service.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Service {
+    /// The service's name.
+    pub label: String,
+}
+
+/// Where a service stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Status {
+    /// Its unit is on disk.
+    pub installed: bool,
+    /// Its manager runs it.
+    pub running: bool,
+    /// The process it runs as.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pid: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process_start: Option<u64>,
+    /// The percent of one core the computer grants the runtime's user.
+    pub granted: u32,
 }
