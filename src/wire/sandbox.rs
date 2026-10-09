@@ -8,7 +8,11 @@ use serde::{Deserialize, Serialize};
 
 /// `sandboxes/list`: the provider's sandboxes.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "SandboxList")
+)]
 pub struct List {
     /// Only those carrying every one of these labels.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -17,7 +21,11 @@ pub struct List {
 
 /// The sandboxes `sandboxes/list` found.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "SandboxListed")
+)]
 pub struct Listed {
     /// Each one.
     pub sandboxes: Vec<Sandbox>,
@@ -99,7 +107,11 @@ pub struct Put {
 
 /// `sandbox/channel`: a local way to `command`'s standard input and output in a sandbox.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "SandboxChannel")
+)]
 pub struct Channel {
     /// The provider's id for the sandbox.
     pub sandbox: String,

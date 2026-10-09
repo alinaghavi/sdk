@@ -18,6 +18,10 @@ pub struct Setup {
     pub skill: String,
     /// The command line a hook runs.
     pub hook: String,
+    /// The runtime's loopback door URL, which a `plugin` door dials.
+    pub door: String,
+    /// The runtime's release.
+    pub release: String,
 }
 
 /// The harness found here, and the entries that set it up.
@@ -341,6 +345,31 @@ pub struct Held {
     pub external_id: String,
 }
 
+/// What `held` answers: who holds the conversation, or where the runtime looks to find out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(untagged)]
+pub enum HeldBy {
+    /// The driver knows.
+    Holder(Holder),
+    /// The driver knows only where to look.
+    Look {
+        /// Where to look.
+        look: Look,
+    },
+}
+
+/// Where the runtime looks for a conversation's holder: the operating-system adapter says
+/// which of these executables hold the transcript open.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct Look {
+    /// The conversation's transcript file.
+    pub transcript: PathBuf,
+    /// The harness's executable names.
+    pub executables: Vec<String>,
+}
+
 /// Who holds a conversation. A driver that cannot prove absence answers a person whose
 /// stop is a process with `certain: false`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -380,7 +409,7 @@ pub enum HolderStop {
     Beyond(String),
 }
 
-/// How a live door treats a model pick.
+/// How a harness's own live door treats a model pick.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -388,6 +417,20 @@ pub enum Door {
     /// It applies a pick itself.
     Picks,
     /// It keeps its own.
+    Keeps,
+}
+
+/// How a driver reaches a live conversation (PROTOCOL.md §4.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum LiveDoor {
+    /// Steery's plugin door: the runtime speaks it directly and applies a pick itself; the
+    /// driver answers no live method.
+    Plugin,
+    /// The harness's own door, which applies a pick itself.
+    Picks,
+    /// The harness's own door, which keeps its own.
     Keeps,
 }
 

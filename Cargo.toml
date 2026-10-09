@@ -12,6 +12,11 @@ name = "steery_sdk"
 ## JSON Schema derivation (schemars) for every wire type.
 schema = ["dep:schemars"]
 
+# Writes `sdk/schema/protocol-v1.json`.
+[[example]]
+name = "schema"
+required-features = ["schema"]
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

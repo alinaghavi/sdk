@@ -11,7 +11,11 @@ pub const SAME_START_MS: u64 = 10_000;
 
 /// `process/start`: start a process detached, in a process group of its own.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "ProcessStart")
+)]
 pub struct Start {
     /// The program and its arguments.
     pub argv: Vec<String>,
@@ -44,7 +48,11 @@ pub struct Started {
 
 /// `process/list`: the processes running.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "ProcessList")
+)]
 pub struct List {
     /// Only these; absent: every process.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -53,7 +61,11 @@ pub struct List {
 
 /// The processes `process/list` found.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "ProcessListed")
+)]
 pub struct Listed {
     /// Each one running; a pid asked for that runs nothing is absent.
     pub processes: Vec<Entry>,
@@ -61,7 +73,11 @@ pub struct Listed {
 
 /// One running process.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "ProcessEntry")
+)]
 pub struct Entry {
     /// Its pid.
     pub pid: u32,

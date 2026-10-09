@@ -197,9 +197,9 @@ pub struct HarnessFacts {
     pub forks_beside: bool,
     /// What a resume keeps without being told.
     pub keeps: Keeps,
-    /// How the live door treats a model pick; absent: there is no live door.
+    /// How a live conversation is reached; absent: there is no live door.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub door: Option<harness::Door>,
+    pub door: Option<harness::LiveDoor>,
     /// The door can say the conversation is idle.
     pub checks_idle: bool,
     /// The acts the harness does at all.
