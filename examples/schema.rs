@@ -104,6 +104,7 @@ fn main() {
         process::Sent,
         process::ServicePlan,
         process::Plan,
+        process::PlanCommand,
         process::PlannedFile,
         sandbox::List,
         sandbox::Listed,

@@ -527,10 +527,15 @@ pub enum Stdin {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct TurnRead {
+    /// The run the line belongs to; a driver may keep state across its lines.
+    pub turn: String,
     /// The stream it came on.
     pub stream: Stream,
     /// The line.
     pub line: String,
+    /// The reference the runtime put in the words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivery: Option<String>,
 }
 
 /// One of a process's output streams.
@@ -600,6 +605,8 @@ pub struct Reader {
     pub model: Option<String>,
     /// The tools it may use.
     pub tools: ReaderTools,
+    /// The folder it runs in.
+    pub cwd: PathBuf,
 }
 
 /// The tools a reader may use.

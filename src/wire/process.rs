@@ -186,8 +186,20 @@ pub struct ServicePlan {
 pub struct Plan {
     /// The files to write.
     pub files: Vec<PlannedFile>,
-    /// The commands to run after, in order.
-    pub commands: Vec<Vec<String>>,
+    /// The commands to run after, in order; the first failure of one that may
+    /// not fail stops the rest.
+    pub commands: Vec<PlanCommand>,
+}
+
+/// One command of a [`Plan`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct PlanCommand {
+    /// The command and its arguments.
+    pub argv: Vec<String>,
+    /// Its failure does not stop the plan.
+    #[serde(default)]
+    pub may_fail: bool,
 }
 
 /// One file of a [`Plan`].
