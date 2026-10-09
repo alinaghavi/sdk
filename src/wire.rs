@@ -72,9 +72,23 @@ impl Initialized {
     pub fn check(&self) -> Result<(), String> {
         match (self.program.kind, &self.harness, &self.machine) {
             (Kind::Harness, Some(harness), None) => harness.check(),
-            (Kind::Machine, None, Some(_)) => Ok(()),
+            (Kind::Machine, None, Some(machine)) => machine.check(),
             (Kind::Harness, _, _) => Err("a driver answers `harness` and no `machine`".into()),
             (Kind::Machine, _, _) => Err("an adapter answers `machine` and no `harness`".into()),
+        }
+    }
+}
+
+impl Machine {
+    fn check(&self) -> Result<(), String> {
+        match self {
+            Self::Sandboxes(SandboxFacts {
+                unavailable: Some(why),
+                ..
+            }) if why.trim().is_empty() || why.contains('\n') => {
+                Err("says `unavailable` in other than one line".into())
+            }
+            _ => Ok(()),
         }
     }
 }
@@ -460,6 +474,10 @@ pub struct SandboxFacts {
     pub channel: Channel,
     /// The operating system inside its sandboxes.
     pub os: Os,
+    /// Why no sandbox of this provider can be had from this computer, whatever the
+    /// settings: one line naming what to install or change. Absent: one can.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<String>,
 }
 
 /// What survives a sandbox's stop.
@@ -533,3 +551,39 @@ pub struct Setting {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Empty {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn adapter(unavailable: Option<&str>) -> Initialized {
+        let mut machine = serde_json::json!({"provides": "sandboxes", "keeps": "filesystem",
+            "idle": "activity", "optional": [], "channel": "argv", "os": "linux"});
+        if let Some(why) = unavailable {
+            machine["unavailable"] = why.into();
+        }
+        serde_json::from_value(serde_json::json!({"protocol": 1,
+            "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona"},
+            "machine": machine}))
+        .unwrap()
+    }
+
+    /// An adapter that cannot work from this computer says why in one line (§3.2); absent,
+    /// it can, and a line that is empty or more than one is not an answer.
+    #[test]
+    fn a_sandbox_provider_says_in_one_line_why_it_is_unavailable() {
+        assert_eq!(adapter(None).check(), Ok(()));
+        let unavailable = adapter(Some("install an OpenSSH client"));
+        assert_eq!(unavailable.check(), Ok(()));
+        let Some(Machine::Sandboxes(facts)) = &unavailable.machine else {
+            panic!("no sandbox facts");
+        };
+        assert_eq!(
+            facts.unavailable.as_deref(),
+            Some("install an OpenSSH client")
+        );
+        for bad in ["", " ", "one\ntwo"] {
+            assert!(adapter(Some(bad)).check().is_err(), "{bad:?}");
+        }
+    }
+}
