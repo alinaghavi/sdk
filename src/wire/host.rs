@@ -94,6 +94,8 @@ pub enum FileKind {
     File,
     Dir,
     Link,
+    /// Anything else: a fifo, a socket, a device.
+    Other,
 }
 
 /// `host/fs/read`: bytes of a file, within its size as read once.
@@ -181,15 +183,29 @@ pub struct FsRemove {
     pub recursive: bool,
 }
 
-/// What `host/programs` answers: the host's programs, as each answered `initialize`.
+/// What `host/programs` answers: the host's programs, as each answered `initialize`, and
+/// why each that does not run cannot be started.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Programs {
     /// Its operating-system adapter.
     pub os: Initialized,
-    /// Its drivers.
+    /// Its drivers that run.
     pub drivers: Vec<Initialized>,
+    /// Its drivers that cannot be started, each with why.
+    pub missing: Vec<Missing>,
+}
+
+/// A program of the host that cannot be started.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Missing {
+    /// `os`, or a driver's id.
+    pub program: String,
+    /// Why, in one line.
+    pub line: String,
 }
 
 /// `host/call`: a program's method, on the host.
@@ -218,6 +234,15 @@ pub struct Notified {
     pub program: String,
     pub method: String,
     pub params: Value,
+}
+
+/// `host/exited`: a program of the host exited; it starts again on its next call.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Exited {
+    /// `os`, or a driver's id.
+    pub program: String,
 }
 
 /// `host/opened`: the host's listener took a connection.

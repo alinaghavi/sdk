@@ -195,6 +195,8 @@ fn main() {
         host::Programs,
         host::Call,
         host::Notified,
+        host::Missing,
+        host::Exited,
         host::Opened,
         host::Dial,
         host::Data,

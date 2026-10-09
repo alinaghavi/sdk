@@ -196,6 +196,8 @@ pub const STREAM_DATA: &str = "stream/data";
 pub const STREAM_CLOSED: &str = "stream/closed";
 /// A notification: a host program's notification (§6.3).
 pub const HOST_NOTIFIED: &str = "host/notified";
+/// A notification: a host program exited (§6.3).
+pub const HOST_EXITED: &str = "host/exited";
 /// A notification: the host's listener took a connection (§6.4).
 pub const HOST_OPENED: &str = "host/opened";
 /// A notification, both ways: a connection's bytes (§6.4).
