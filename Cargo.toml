@@ -1,0 +1,28 @@
+[package]
+name = "steery-sdk"
+version.workspace = true
+edition.workspace = true
+license = "MIT"
+description = "The program protocol: the wire types, the stdio server a driver or an adapter runs, and the client the Steery runtime speaks it with"
+
+[lib]
+name = "steery_sdk"
+
+[features]
+## JSON Schema derivation (schemars) for every wire type.
+schema = ["dep:schemars"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["io-util", "io-std", "macros", "process", "rt", "sync", "time"] }
+schemars = { version = "1", optional = true }
+
+# The client's SIGTERM to a program still running after `shutdown` (PROTOCOL.md §2):
+# tokio's own kill is SIGKILL.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[lints]
+workspace = true
