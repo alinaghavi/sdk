@@ -35,6 +35,29 @@ pub struct Start {
     /// The service (its label) whose share of the CPU it runs in, where there is one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    /// `<what>` of `STEERY_STARTED`: the adapter sets `STEERY_STARTED=<its own pid>:<what>`
+    /// in the process's environment, over any value `env` gives it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started: Option<String>,
+    /// The file the adapter writes how the process ended to ([`Ended`]), 0600, once it
+    /// reaps it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<PathBuf>,
+}
+
+/// How a process `process/start` started ended, as its `status` file holds it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "schema",
+    derive(schemars::JsonSchema),
+    schemars(rename = "ProcessEnded")
+)]
+#[serde(rename_all = "lowercase", deny_unknown_fields)]
+pub enum Ended {
+    /// It exited with this code.
+    Code(i32),
+    /// A signal ended it.
+    Signal(i32),
 }
 
 /// The process `process/start` started.
@@ -88,6 +111,8 @@ pub struct Entry {
     pub pid: u32,
     /// Its parent's pid.
     pub ppid: u32,
+    /// Its process group.
+    pub pgid: u32,
     /// Its start time, in milliseconds since 1970.
     pub process_start: u64,
     /// Its executable's name.
@@ -101,6 +126,9 @@ pub struct Entry {
     /// The folder it works in now; absent where it cannot be read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cwd: Option<PathBuf>,
+    /// It is stopped (Ctrl-Z, SIGSTOP).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub stopped: bool,
 }
 
 /// `process/environ`: some of a process's environment.
@@ -134,6 +162,8 @@ pub struct Files {
     pub pid: u32,
     /// Its start time, which the pid must still have.
     pub process_start: u64,
+    /// Only the files it holds open for writing.
+    pub writing: bool,
 }
 
 /// The files `process/files` found open.

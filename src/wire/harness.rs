@@ -669,9 +669,6 @@ pub struct Moment {
     /// The sub-agent whose moment it is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sub_agent: Option<String>,
-    /// The lead its process inherited.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lead: Option<SessionRef>,
     /// When it happened.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub at: Option<u64>,
@@ -843,6 +840,21 @@ pub struct Look {
     /// A process running as the harness that nothing answers for may hold it without
     /// holding a transcript open.
     pub strays: bool,
+    /// A process holding or naming the transcripts with one of these arguments is
+    /// somewhere the runtime cannot reach, and is never signalled.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub beyond: Vec<Beyond>,
+}
+
+/// A process the runtime never signals ([`Look::beyond`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Beyond {
+    /// An argument exactly equal to this.
+    pub arg: String,
+    /// What the holder reads, `{"beyond": line}`.
+    pub line: String,
 }
 
 /// Who holds a conversation.
