@@ -369,7 +369,11 @@ mod tests {
         );
         assert!(matches!(stuck, Err(CallError::Timeout)), "{stuck:?}");
         assert!(matches!(queued, Err(CallError::Timeout)), "{queued:?}");
-        assert!(began.elapsed() < Duration::from_secs(2), "{:?}", began.elapsed());
+        assert!(
+            began.elapsed() < Duration::from_secs(2),
+            "{:?}",
+            began.elapsed()
+        );
 
         let next = client
             .call("process/list", json!({}), Duration::from_secs(5))
@@ -381,6 +385,9 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner())
             .try_wait()
             .unwrap();
-        assert!(exited.is_some(), "the program that held a torn line is killed");
+        assert!(
+            exited.is_some(),
+            "the program that held a torn line is killed"
+        );
     }
 }
