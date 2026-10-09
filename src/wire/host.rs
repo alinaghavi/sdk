@@ -53,6 +53,10 @@ pub struct Welcome {
     pub steery: PathBuf,
     /// The port of its loopback listener.
     pub port: u16,
+    /// The environment `serve` runs in: what a process control starts there is given, as
+    /// control gives its own to a process it starts on its own computer.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub env: std::collections::BTreeMap<String, String>,
 }
 
 /// `host/fs/stat`: what is at each path.
