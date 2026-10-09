@@ -115,15 +115,7 @@ impl Client {
         &self,
         params: &wire::InitializeParams,
     ) -> Result<wire::Initialized, CallError> {
-        let answer = self
-            .call(
-                method::INITIALIZE,
-                serde_json::to_value(params).map_err(|e| CallError::Invalid(e.to_string()))?,
-                bound(method::INITIALIZE),
-            )
-            .await?;
-        let initialized: wire::Initialized =
-            serde_json::from_value(answer).map_err(|e| CallError::Invalid(e.to_string()))?;
+        let initialized = self.ask::<method::Initialize>(params).await?;
         if !params.protocol.contains(&initialized.protocol) {
             return Err(CallError::Invalid(format!(
                 "protocol {} was not offered",
@@ -132,6 +124,14 @@ impl Client {
         }
         initialized.check().map_err(CallError::Invalid)?;
         Ok(initialized)
+    }
+
+    /// Ask the request `M` with `params`, waiting at most its bound (PROTOCOL.md §9), and
+    /// read its answer as its result.
+    pub async fn ask<M: method::Method>(&self, params: &M::Params) -> Result<M::Result, CallError> {
+        let params = serde_json::to_value(params).map_err(|e| CallError::Invalid(e.to_string()))?;
+        let answer = self.call(M::NAME, params, M::BOUND).await?;
+        serde_json::from_value(answer).map_err(|e| CallError::Invalid(e.to_string()))
     }
 
     /// Call `method` under a new id, waiting at most `within`.
@@ -195,9 +195,7 @@ impl Client {
     /// Send `shutdown`, wait for its answer, close standard input, and send SIGTERM to a
     /// program still running 5 s later; one still running 5 s after that is killed.
     pub async fn shutdown(mut self) -> std::io::Result<std::process::ExitStatus> {
-        let _ = self
-            .call(method::SHUTDOWN, json!({}), bound(method::SHUTDOWN))
-            .await;
+        let _ = self.ask::<method::Shutdown>(&wire::Empty {}).await;
         drop(self.stdin.lock().await.take());
         if let Ok(status) = tokio::time::timeout(GRACE, self.child.wait()).await {
             self.reader.abort();
@@ -303,34 +301,4 @@ fn answer(message: &Value) -> Result<Value, CallError> {
         INVALID_CODE => CallError::Invalid(message),
         code => CallError::Remote { code, message },
     })
-}
-
-/// How long the runtime waits for `method`'s answer (PROTOCOL.md §9). A method the table
-/// does not name is given 10 s; `host/call` is bounded by [`carried`].
-pub fn bound(method: &str) -> Duration {
-    let millis = match method {
-        method::SETUP_PLAN | method::MODELS | method::SESSIONS_LIST => 30_000,
-        method::IDLE | method::RECEIPT_FIND => 20_000,
-        method::STOP => 2_800,
-        method::RECAP => 40_000,
-        method::SERVICE_PLAN | method::SERVICE_STATUS => 10_000,
-        method::SERVICE_START | method::SERVICE_RESTART | method::SERVICE_REMOVE => 30_000,
-        method::SANDBOX_ENSURE
-        | method::SANDBOX_START
-        | method::SANDBOX_ARCHIVE
-        | method::SANDBOX_PUT => 300_000,
-        method::SANDBOXES_LIST | method::STREAM_WRITE => 60_000,
-        method::HOST_HELLO => 10_000,
-        method::HOST_PROGRAMS | method::HOST_DIAL | method::HOST_PING => 30_000,
-        method if method.starts_with("host/fs/") => 30_000,
-        method if method.starts_with("process/") => 5_000,
-        method if method.starts_with("sandbox/") => 60_000,
-        _ => 10_000,
-    };
-    Duration::from_millis(millis)
-}
-
-/// How long control waits for a `host/call` carrying `method`: its own bound, and 5 s.
-pub fn carried(method: &str) -> Duration {
-    bound(method) + Duration::from_secs(5)
 }
