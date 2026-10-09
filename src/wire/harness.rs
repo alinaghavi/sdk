@@ -484,7 +484,7 @@ pub enum Voice {
     Agent,
     /// Its reasoning or progress, where the harness writes it as text.
     Thought,
-    /// The text a call carried: its input, then its result.
+    /// The text of a call's result, given after its `call_ended`; a call's input is `call_began.call.input` and is never repeated as words.
     Tool,
     /// A harness's summary of earlier history.
     Summary,

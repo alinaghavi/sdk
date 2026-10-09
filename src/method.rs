@@ -160,7 +160,7 @@ requests! {
     /// Keep a sandbox from going idle, where the provider can (§5.2).
     SandboxKeepalive, SANDBOX_KEEPALIVE = "sandbox/keepalive": sandbox::Target => wire::Empty, seconds(60), [];
     /// Write a file into a sandbox (§5.2).
-    SandboxPut, SANDBOX_PUT = "sandbox/put": sandbox::Put => wire::Empty, seconds(300), [];
+    SandboxPut, SANDBOX_PUT = "sandbox/put": sandbox::Put => wire::Empty, seconds(300), [OFFLINE, NOT_FOUND, REFUSED];
     /// A way to a command's standard input and output in a sandbox (§5.2).
     SandboxChannel, SANDBOX_CHANNEL = "sandbox/channel": sandbox::Channel => sandbox::Reach, seconds(60), [];
     /// The runtime's bytes for a `stream` channel (§5.3).
@@ -189,13 +189,13 @@ requests! {
     HostFsRemove, HOST_FS_REMOVE = "host/fs/remove": host::FsRemove => wire::Empty, seconds(30),
         [NOT_FOUND, REFUSED];
     /// The host's programs, as each answered `initialize` (§6.3).
-    HostPrograms, HOST_PROGRAMS = "host/programs": wire::Empty => host::Programs, seconds(30), [];
+    HostPrograms, HOST_PROGRAMS = "host/programs": wire::Empty => host::Programs, seconds(30), [OFFLINE];
     /// A program's method, on the host: answered with what the program answered (§6.3), or
     /// refused `offline` where the program is missing or restarting. A refusal of the method
     /// it carries is that method's own.
-    HostCall, HOST_CALL = "host/call": host::Call => Value, seconds(5), [OFFLINE];
+    HostCall, HOST_CALL = "host/call": host::Call => Value, seconds(5), [NO_ANSWER, OFFLINE];
     /// A connection on the host (§6.4).
-    HostDial, HOST_DIAL = "host/dial": host::Dial => wire::Empty, seconds(30), [NO_DOOR];
+    HostDial, HOST_DIAL = "host/dial": host::Dial => wire::Empty, seconds(30), [NO_DOOR, REFUSED];
 }
 
 /// How long control waits for a `host/call` carrying the request named `name`: its own
