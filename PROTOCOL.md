@@ -1,9 +1,9 @@
-# The program protocol, version 1
+# The program protocol, version 2
 
 The one contract between Steery's runtime (`steery`) and every **driver** and **adapter**,
 and between the runtime's control and a remote host (§6). It is published under MIT in
 [steery-dev/sdk](https://github.com/steery-dev/sdk) with `steery-sdk`, the Rust crate that
-implements it, and the JSON Schema [`schema/protocol-v1.json`](schema/protocol-v1.json),
+implements it, and the JSON Schema [`schema/protocol-v2.json`](schema/protocol-v2.json),
 which holds every shape below. Steery's own drivers
 ([steery-dev/drivers](https://github.com/steery-dev/drivers)) and adapters
 ([steery-dev/adapters](https://github.com/steery-dev/adapters)) are programs like any
@@ -86,7 +86,7 @@ The runtime's first request. Nothing else is sent before its answer.
 
 ```json
 {"jsonrpc": "2.0", "id": "1", "method": "initialize",
- "params": {"protocol": [1], "runtime": {"release": "6.9.6", "os": "linux", "arch": "x86_64"},
+ "params": {"protocol": [2], "runtime": {"release": "7.0.0", "os": "linux", "arch": "x86_64"},
             "home": "/home/ada", "config": "/home/ada/.config/steery",
             "settings": {"DAYTONA_API_KEY": "…"}}}
 ```
@@ -116,7 +116,7 @@ Every surface Steery draws a harness or a machine on — its apps, its web pages
 ### 3.1 A driver
 
 ```json
-{"protocol": 1,
+{"protocol": 2,
  "program": {"id": "omp", "kind": "harness", "release": "1.0.0", "label": "omp", "short": "omp",
              "tint": "#6e62a8", "mark": "M4 4h16v16H4z"},
  "harness": {
@@ -198,7 +198,7 @@ A **Hook** is `{event, kind, via, says, waits?, env?}`:
 ### 3.2 An adapter
 
 ```json
-{"protocol": 1,
+{"protocol": 2,
  "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona",
              "short": "Dt", "tint": "#1f2937"},
  "machine": {"provides": "sandboxes", "keeps": "filesystem", "idle": "activity",
@@ -1083,7 +1083,9 @@ reaches the person. The plugin door adds two words of its own (§4.4), defined i
 
 ## 10. Versions
 
-This is version 1. Its shapes are strict (§2): a program or runtime rejects a field it
+This is version 2. Its shapes are strict (§2): a program or runtime rejects a field it
 does not know, so any change to a shape, a method, a word or a meaning is a new protocol
 number, never an extension of this one. The runtime offers every number it speaks and the
-program picks one. The plugin door (§4.4) is numbered on its own, in its `hello`.
+program picks one; `steery-sdk`'s major version is the protocol it speaks. Version 2 is
+version 1 with a program's look (`short` required, `tint`, `mark`) and the release
+manifest (§7.1). The plugin door (§4.4) is numbered on its own, in its `hello`.

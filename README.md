@@ -10,7 +10,7 @@ and the means to write one.
 |---|---|
 | [PROTOCOL.md](PROTOCOL.md) | The protocol: every message, shape, refusal word and bound. |
 | [`steery-sdk`](src/lib.rs) | The Rust crate: the wire types, `serve` (a program's loop), the runtime's client, and the release manifest. |
-| [schema/protocol-v1.json](schema/protocol-v1.json) | Every shape as JSON Schema. |
+| [schema/protocol-v2.json](schema/protocol-v2.json) | Every shape as JSON Schema. |
 | [examples/driver](examples/driver) | The smallest driver. |
 | [examples/adapter](examples/adapter) | The smallest sandbox adapter. |
 
@@ -34,7 +34,7 @@ Daytona, OpenSandbox). Steery treats them exactly as it treats yours.
    SDK by git instead of by path:
 
    ```toml
-   steery-sdk = { git = "https://github.com/steery-dev/sdk", tag = "v1.0.0" }
+   steery-sdk = { git = "https://github.com/steery-dev/sdk", tag = "v2.0.0" }
    ```
 
 2. Change the id, label and facts in `initialize` to your harness's (PROTOCOL.md §3.1),

@@ -627,7 +627,7 @@ mod tests {
         if let Some(why) = unavailable {
             machine["unavailable"] = why.into();
         }
-        serde_json::from_value(serde_json::json!({"protocol": 1,
+        serde_json::from_value(serde_json::json!({"protocol": 2,
             "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona", "short": "Dt"},
             "machine": machine}))
         .unwrap()

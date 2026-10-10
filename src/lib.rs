@@ -23,7 +23,7 @@ use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
 
 /// The protocol version this crate speaks.
-pub const PROTOCOL: u32 = 1;
+pub const PROTOCOL: u32 = 2;
 
 /// The words a program refuses with (PROTOCOL.md §8). The runtime and the server own what
 /// each one means; an unknown word reaches the person.
@@ -262,7 +262,7 @@ pub async fn serve<P: Program>(make: impl FnOnce(Notifier) -> P) -> std::io::Res
             }
         };
         let Some(method) = message.get("method").and_then(Value::as_str) else {
-            // Answers to requests a program never sends, in version 1.
+            // Answers to requests a program never sends, in this version.
             continue;
         };
         let method = method.to_owned();

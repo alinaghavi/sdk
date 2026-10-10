@@ -288,7 +288,7 @@ async fn read(stdout: ChildStdout, pending: Pending, notify: mpsc::UnboundedSend
         };
         let id = message.get("id").filter(|id| !id.is_null());
         if let Some(method) = message.get("method").and_then(Value::as_str) {
-            // A program sends no requests in version 1.
+            // A program sends no requests in this version.
             if id.is_none() {
                 let _ = notify.send(Notification {
                     method: method.to_owned(),
