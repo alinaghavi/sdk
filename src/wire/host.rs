@@ -1,4 +1,4 @@
-//! The host protocol (PROTOCOL.md §6): control's channel to `steery sandbox serve`, a remote
+//! The host protocol (PROTOCOL.md §6): control's channel to `steery host serve`, a remote
 //! host. Control sends requests; `serve` answers them and sends notifications.
 
 use std::path::PathBuf;

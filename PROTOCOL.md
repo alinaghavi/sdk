@@ -1,9 +1,9 @@
-# The program protocol, version 2
+# The program protocol, version 3
 
 The one contract between Steery's runtime (`steery`) and every **driver** and **adapter**,
 and between the runtime's control and a remote host (§6). It is published under MIT in
 [steery-dev/sdk](https://github.com/steery-dev/sdk) with `steery-sdk`, the Rust crate that
-implements it, and the JSON Schema [`schema/protocol-v2.json`](schema/protocol-v2.json),
+implements it, and the JSON Schema [`schema/protocol-v3.json`](schema/protocol-v3.json),
 which holds every shape below. Steery's own drivers
 ([steery-dev/drivers](https://github.com/steery-dev/drivers)) and adapters
 ([steery-dev/adapters](https://github.com/steery-dev/adapters)) are programs like any
@@ -14,7 +14,7 @@ other: the runtime knows no program by its id, and every one is added the same w
 | Program | Connects Steery to | Wire `kind` |
 |---|---|---|
 | **driver** | one harness: an agent product | `harness` |
-| **adapter** | one kind of machine: an operating system, or a sandbox provider | `machine` |
+| **adapter** | one kind of machine: an operating system, or hosts it makes | `machine` |
 
 An adapter **provides** one of two things:
 
@@ -23,17 +23,19 @@ An adapter **provides** one of two things:
   system's name as Rust spells it (`std::env::consts::OS`: `macos`, `linux`), and it
   answers that same name as `machine.os`: the runtime runs the one named for the system it
   runs on, and reads it as missing where `machine.os` names another.
-- `sandboxes`: a sandbox provider. It makes, starts, stops and deletes sandboxes, and gives
-  a command whose standard input and output reach `steery sandbox attach` inside one.
-  Inside the sandbox, `steery sandbox serve` uses the operating-system adapter of that
-  sandbox (`linux`) for its processes.
+- `hosts`: hosts, one for each conversation, made by a vendor's service (Daytona's
+  cloud, for one). It makes, starts, stops and deletes hosts, and gives a command whose
+  standard input and output reach `steery host attach` inside one. Inside the host,
+  `steery host serve` uses the operating-system adapter of that host (`linux`) for its
+  processes. A machine whose adapter makes hosts runs each conversation in a host of its
+  own, and none on the computer that runs it.
 
 ```mermaid
 flowchart LR
   R[steery runtime] -->|stdio| D[driver: omp]
   R -->|stdio| A[adapter: macos or linux]
   R -->|stdio| P[adapter: daytona]
-  P -.->|channel| S[steery sandbox serve, in a sandbox]
+  P -.->|channel| S[steery host serve, in a host]
   S -->|stdio| L[adapter: linux]
   S -->|stdio| D2[driver: omp]
 ```
@@ -86,7 +88,7 @@ The runtime's first request. Nothing else is sent before its answer.
 
 ```json
 {"jsonrpc": "2.0", "id": "1", "method": "initialize",
- "params": {"protocol": [2], "runtime": {"release": "7.0.0", "os": "linux", "arch": "x86_64"},
+ "params": {"protocol": [3], "runtime": {"release": "7.0.0", "os": "linux", "arch": "x86_64"},
             "home": "/home/ada", "config": "/home/ada/.config/steery",
             "settings": {"DAYTONA_API_KEY": "…"}}}
 ```
@@ -116,7 +118,7 @@ Every surface Steery draws a harness or a machine on — its apps, its web pages
 ### 3.1 A driver
 
 ```json
-{"protocol": 2,
+{"protocol": 3,
  "program": {"id": "omp", "kind": "harness", "release": "1.0.0", "label": "omp", "short": "omp",
              "tint": "#6e62a8", "mark": "M4 4h16v16H4z"},
  "harness": {
@@ -198,25 +200,25 @@ A **Hook** is `{event, kind, via, says, waits?, env?}`:
 ### 3.2 An adapter
 
 ```json
-{"protocol": 2,
+{"protocol": 3,
  "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona",
              "short": "Dt", "tint": "#1f2937"},
- "machine": {"provides": "sandboxes", "keeps": "filesystem", "idle": "activity",
+ "machine": {"provides": "hosts", "keeps": "filesystem", "idle": "activity",
              "optional": ["archive", "keepalive"], "channel": "argv", "os": "linux"},
  "settings": [{"name": "DAYTONA_API_KEY", "secret": true, "required": true,
                "about": "An API key from app.daytona.io/dashboard/keys"}]}
 ```
 
-`machine.provides` is `processes` or `sandboxes`, and the rest of `machine` is that
+`machine.provides` is `processes` or `hosts`, and the rest of `machine` is that
 kind's facts:
 
 - `processes`: `{os: "macos" | "linux", service: "launchd" | "systemd"}`.
-- `sandboxes`: `keeps` is what survives `sandbox/stop` (`filesystem`, `memory`, or
-  `volume`: only the folder in `persist?`); `idle` is the provider's own timer
+- `hosts`: `keeps` is what survives `hosts/stop` (`filesystem`, `memory`, or
+  `volume`: only the folder in `persist?`); `idle` is the vendor's own timer
   (`activity`, `ttl`, `none`); `optional` lists the optional methods it has, by their last
   word (`archive`, `pause`, `fork`, `keepalive`); `channel` is `argv` (§5.2) or `stream`
-  (§5.3); `os` is the operating system inside its sandboxes (`linux`); `unavailable?` is
-  one line saying why no sandbox of this provider can be had from this computer, whatever
+  (§5.3); `os` is the operating system inside its hosts (`linux`); `unavailable?` is
+  one line saying why no host of this adapter can be had from this computer, whatever
   the settings, naming what to install or change (`Daytona's channel runs ssh on this
   computer, and none is installed: …`). The runtime adds no machine of an unavailable
   adapter, offers none, and reads a machine it runs as Missing with the line. The adapter
@@ -267,12 +269,13 @@ The runtime and every program read these the same way.
 ### 3.4 Settings
 
 A program declares the settings it needs: `{name, secret, required, about}`. The person
-gives them once, by `--setting NAME[=VALUE]` where the program is put to use: a sandbox
-adapter's at `steery machine add`, a driver's at `steery programs add` (§7). A `secret`
-one not given there is typed at that terminal, unechoed, and never leaves the computer;
-any other not given is asked there too, or on the card the new machine raises. A
-machine's values are checked against the provider and kept in the machine's folder for
-the person's user alone (`settings.json`, 0600); a driver's are kept in its record (§7),
+gives them once, by `--setting NAME[=VALUE]` where the program is put to use: an adapter
+that makes hosts at `steery setup --adapter <id>` on a computer (or on Steery's web, where
+a cloud machine is added), a driver's at `steery programs add` (§7). A `secret` one not
+given there is typed at that terminal, unechoed, and never leaves the computer; any other
+not given is asked there too, or on the card the new machine raises. An adapter's values
+are checked with `hosts/list` against the vendor and kept in the computer's Steery folder
+for the person's user alone (0600); a driver's are kept in its record (§7),
 0600 too, and a driver added again keeps each value given before that is not given
 again. They are passed only in `initialize`. A program never asks for anything else, and
 nothing it declares is read from the environment the runtime runs in.
@@ -777,50 +780,53 @@ at least every 30 s. A person answers a card on the phone; the door carries no a
   outlive it (turns) keep running. `service/remove` stops and removes the service, and
   stops none of those processes. All three are refused `refused` with the manager's line.
 
-### 5.2 `sandboxes`: a sandbox provider
+### 5.2 `hosts`: an adapter that makes hosts
 
 | Method | Params | Result | Optional | Refusals |
 |---|---|---|---|---|
-| `sandboxes/list` | `{labels?}` | `{sandboxes: [{sandbox, state, labels, created_at}]}` | | `offline`, `refused` |
-| `sandbox/ensure` | `{key, source?: {snapshot} \| {image}, labels}` | `{sandbox}`, made, or found by `key` | | `offline`, `refused`, `start-failed`, `no-place` |
-| `sandbox/start` | `{sandbox}` | `{state}` | | `offline`, `refused`, `not-found`, `start-failed` |
-| `sandbox/stop`, `sandbox/delete` | `{sandbox}` | `{state}` | | `offline`, `refused`, `not-found` |
-| `sandbox/archive`, `sandbox/pause` | `{sandbox}` | `{state}` | yes | `offline`, `refused`, `not-found` |
-| `sandbox/fork` | `{sandbox}` | `{sandbox}` | yes | `offline`, `refused`, `not-found`, `start-failed` |
-| `sandbox/keepalive` | `{sandbox}` | `{}` | yes | `offline`, `refused`, `not-found` |
-| `sandbox/put` | `{sandbox, path, content, mode}`: base64 content | `{}` | | `offline`, `not-found` (no such sandbox), `refused` (the bytes did not arrive whole; a partial file is removed first) |
-| `sandbox/channel` | `{sandbox, command: [string]}`: the command, its program first | `{argv, env}` or `{stream}` | | `offline`, `refused`, `not-found` |
+| `hosts/list` | `{labels?}` | `{hosts: [{host, state, labels, created_at}]}` | | `offline`, `refused` |
+| `hosts/ensure` | `{key, source?: {snapshot} \| {image}, labels}` | `{host}`, made, or found by `key` | | `offline`, `refused`, `start-failed`, `no-place` |
+| `hosts/start` | `{host}` | `{state}` | | `offline`, `refused`, `not-found`, `start-failed` |
+| `hosts/stop`, `hosts/delete` | `{host}` | `{state}` | | `offline`, `refused`, `not-found` |
+| `hosts/archive`, `hosts/pause` | `{host}` | `{state}` | yes | `offline`, `refused`, `not-found` |
+| `hosts/fork` | `{host}` | `{host}` | yes | `offline`, `refused`, `not-found`, `start-failed` |
+| `hosts/keepalive` | `{host}` | `{}` | yes | `offline`, `refused`, `not-found` |
+| `hosts/put` | `{host, path, content, mode}`: base64 content | `{}` | | `offline`, `not-found` (no such host), `refused` (the bytes did not arrive whole; a partial file is removed first) |
+| `hosts/channel` | `{host, command: [string]}`: the command, its program first | `{argv, env}` or `{stream}` | | `offline`, `refused`, `not-found` |
 
-`offline`: the provider cannot be reached or is down (a 502, 503 or 504, a request out of
-time); `refused`: the provider answered no (a bad key, a quota); `not-found`: it has no such
-sandbox.
+`host` is the vendor's own id for the host. `state` is in the vendor's own word.
 
-`source` absent is the provider's default. The sandbox, its image, its credentials and its
-network are the provider's and its owner's; an adapter passes none of its own.
+`offline`: the vendor cannot be reached or is down (a 502, 503 or 504, a request out of
+time); `refused`: the vendor answered no (a bad key, a quota); `not-found`: it has no such
+host.
 
-`sandbox/ensure` finds the sandbox for `key` with a read that sees the provider's own
-writes at once (a listing that lags a new sandbox does not), so two ensures for one key,
-at once or one after the other, answer one sandbox. A provider with unique names gives it
-a name made from `key` and reads it back by name; a lost race to make it is read as found.
+`source` absent is the vendor's default. The host, its image, its credentials and its
+network are the vendor's and its owner's; an adapter passes none of its own.
 
-`sandboxes/list` states are the provider's listing and may lag a change by seconds; the
-state a lifecycle method answers is the one to act on. A provider's upload can be much
-slower than its download, so a large file may be better fetched by the sandbox itself over
-the channel (for example with `curl`). A `sandbox/put`'s content is at most 12 MiB, so its
-line stays within §2's 16 MiB. An adapter checks that a `sandbox/put` wrote every byte,
-and removes a partial file before it refuses.
+`hosts/ensure` finds the host for `key` with a read that sees the vendor's own writes at
+once (a listing that lags a new host does not), so two ensures for one key, at once or one
+after the other, answer one host. A vendor with unique names gives it a name made from
+`key` and reads it back by name; a lost race to make it is read as found. Every host the
+runtime makes carries the label `steery-machine=<the machine's key id>`.
 
-`sandbox/channel` answers a local command whose standard input and output reach
-`command` in the sandbox (`channel: argv`), or a stream the adapter carries (§5.3).
+`hosts/list` states are the vendor's listing and may lag a change by seconds; the state a
+lifecycle method answers is the one to act on. A vendor's upload can be much slower than
+its download, so a large file may be better fetched by the host itself over the channel
+(for example with `curl`). A `hosts/put`'s content is at most 12 MiB, so its line stays
+within §2's 16 MiB. An adapter checks that a `hosts/put` wrote every byte, and removes a
+partial file before it refuses.
+
+`hosts/channel` answers a local command whose standard input and output reach `command`
+in the host (`channel: argv`), or a stream the adapter carries (§5.3).
 
 ### 5.3 A `stream` channel
 
-An adapter whose provider has no local command for a channel answers `sandbox/channel`
+An adapter whose vendor has no local command for a channel answers `hosts/channel`
 with `{stream}` and carries the bytes itself: the runtime sends `stream/write {stream,
 bytes}` (a request, answered `{}` once the bytes are handed on) and `stream/close {stream}`
 (a request, answered `{}`); the adapter sends the notifications `stream/data {stream,
-bytes}` and `stream/closed {stream, exit?}`, never before its answer to `sandbox/channel`.
-`exit` is absent where the command was ended by a signal. A provider with no way to close only
+bytes}` and `stream/closed {stream, exit?}`, never before its answer to `hosts/channel`.
+`exit` is absent where the command was ended by a signal. A vendor with no way to close only
 the command's standard input ends the command at `stream/close`, so a command that
 finishes at the end of its input is given all of it before the close.
 
@@ -828,26 +834,26 @@ finishes at the end of its input is given all of it before the close.
 
 Control reaches every host through one interface: its files, its operating-system
 adapter, its drivers, and its loopback listener. The local host is in process. A
-**remote host** is `steery sandbox serve` inside a sandbox, and control speaks this
-section to it over a channel: the standard input and output of `steery sandbox attach`,
-which joins them to `serve`'s unix socket. `attach` is the `command` of
-`sandbox/channel`.
+**remote host** is `steery host serve` inside a host an adapter made (§5.2), and control
+speaks this section to it over a channel: the standard input and output of `steery host
+attach`, which joins them to `serve`'s unix socket. `attach` is the `command` of
+`hosts/channel`.
 
 `serve` runs detached, started by the first `attach`, and holds no key and no event
 stream. It keeps its host's turn folders, starts and supervises that host's programs
 exactly as control does locally, and listens on the host's loopback.
 
-`steery sandbox check` attaches a remote host, over a command or a sandbox's channel, and
+`steery host check` attaches a remote host, over a command or a made host's channel, and
 checks it end to end: its welcome and programs, its files, calls to its programs, and a
 connection dialled on it to its own listener and carried back, as `steery programs test`
 checks a program (§7.3).
 
-**Installing.** Where a sandbox has no `steery`, or another release of it, or programs
-other than the computer's, control installs a set over one `sandbox/channel`: `steery`
-for the sandbox's target, and the build of every program added on the computer for that
+**Installing.** Where a host has no `steery`, or another release of it, or programs
+other than the computer's, control installs a set over one `hosts/channel`: `steery`
+for the host's target, and the build of every program added on the computer for that
 target (§7), each with its record. The command unpacks it into a staging folder, runs the
 staged `steery --version` and `steery programs check`, and only then moves the link to the
-staged folder, as `install.sh` does. A program with no build for the sandbox's target is
+staged folder, as `install.sh` does. A program with no build for the host's target is
 not carried, and its harness reads Missing there.
 
 ### 6.1 The channel
@@ -966,7 +972,7 @@ target. The shape is `steery_sdk::release::Manifest` (and `release` in the schem
 - Each program is named once, with its `id` and `kind` as its `initialize` answers them,
   and a build for at least one target. Targets are Rust target triples:
   `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`,
-  `aarch64-unknown-linux-gnu`. A program that runs in sandboxes has a Linux build; one
+  `aarch64-unknown-linux-gnu`. A program that runs in made hosts has a Linux build; one
   that links glibc 2.30 at most runs in every current Linux image.
 - `archive` is exactly `steery-<driver|adapter>-<id>-<release>-<target>.tar.gz`, and is
   fetched from the folder the manifest was read from. It holds one regular file,
@@ -1019,7 +1025,7 @@ of a source and no others.
    ```
 
    `executable` is relative to `<config>/programs/`; `sha256` is the executable's.
-   `builds` holds every build of its source for another target, for a sandbox (§6).
+   `builds` holds every build of its source for another target, for a made host (§6).
    `machine` is an adapter's `provides` and `os`, read in step 2.
 
 The command exits 0 once added, 1 refused or declined, 2 with the consent still to give.
@@ -1075,17 +1081,20 @@ reaches the person. The plugin door adds two words of its own (§4.4), defined i
 | `process/*` | 5 s |
 | `service/plan`, `service/status` | 10 s |
 | `service/start`, `service/restart`, `service/remove` | 30 s |
-| `sandbox/ensure`, `sandbox/start`, `sandbox/archive`, `sandbox/put` | 300 s |
-| other `sandbox/*`, `sandboxes/list`, `stream/write` | 60 s |
+| `hosts/ensure`, `hosts/start`, `hosts/archive`, `hosts/put` | 300 s |
+| other `hosts/*`, `stream/write` | 60 s |
 | `stream/close` | 10 s |
 | `host/fs/*`, `host/programs`, `host/dial`, `host/ping` | 30 s |
 | `host/call` | the bound of the method it carries, and 5 s |
 
 ## 10. Versions
 
-This is version 2. Its shapes are strict (§2): a program or runtime rejects a field it
+This is version 3. Its shapes are strict (§2): a program or runtime rejects a field it
 does not know, so any change to a shape, a method, a word or a meaning is a new protocol
 number, never an extension of this one. The runtime offers every number it speaks and the
-program picks one; `steery-sdk`'s major version is the protocol it speaks. Version 2 is
+program picks one; `steery-sdk`'s major version is the protocol it speaks. Version 3 is
+version 2 with one rename: what an adapter makes is a **host**, so `machine.provides` is
+`hosts`, its methods are `hosts/*` (§5.2), each names one by `host`, and `hosts/list`
+answers `{hosts}`; nothing else changed. Version 2 was
 version 1 with a program's look (`short` required, `tint`, `mark`) and the release
 manifest (§7.1). The plugin door (§4.4) is numbered on its own, in its `hello`.

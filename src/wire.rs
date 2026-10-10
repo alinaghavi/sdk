@@ -4,8 +4,8 @@
 pub mod door;
 pub mod harness;
 pub mod host;
+pub mod hosts;
 pub mod process;
-pub mod sandbox;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -140,7 +140,7 @@ impl ProgramInfo {
 impl Machine {
     fn check(&self) -> Result<(), String> {
         match self {
-            Self::Sandboxes(SandboxFacts {
+            Self::Hosts(HostFacts {
                 unavailable: Some(why),
                 ..
             }) if why.trim().is_empty() || why.contains('\n') => {
@@ -487,8 +487,8 @@ pub struct Keeps {
 pub enum Machine {
     /// An operating system: its processes and its service manager (§5.1).
     Processes(ProcessFacts),
-    /// A sandbox provider (§5.2).
-    Sandboxes(SandboxFacts),
+    /// Hosts it makes, one for each conversation (§5.2).
+    Hosts(HostFacts),
 }
 
 /// An operating system's facts.
@@ -520,32 +520,32 @@ pub enum ServiceManager {
     Systemd,
 }
 
-/// A sandbox provider's facts.
+/// The facts of an adapter that makes hosts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
-pub struct SandboxFacts {
-    /// What survives `sandbox/stop`.
+pub struct HostFacts {
+    /// What survives `hosts/stop`.
     pub keeps: Survives,
     /// The only folder that survives, where `keeps` is `volume`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub persist: Option<PathBuf>,
-    /// The provider's own idle timer.
+    /// The vendor's own idle timer.
     pub idle: Idle,
     /// The optional methods it has, by their last word.
     #[serde(default)]
     pub optional: Vec<Optional>,
-    /// How `sandbox/channel` reaches a sandbox.
+    /// How `hosts/channel` reaches a host.
     pub channel: Channel,
-    /// The operating system inside its sandboxes.
+    /// The operating system inside its hosts.
     pub os: Os,
-    /// Why no sandbox of this provider can be had from this computer, whatever the
+    /// Why no host of this adapter can be had from this computer, whatever the
     /// settings: one line naming what to install or change. Absent: one can.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unavailable: Option<String>,
 }
 
-/// What survives a sandbox's stop.
+/// What survives a host's stop.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -558,20 +558,20 @@ pub enum Survives {
     Volume,
 }
 
-/// A sandbox provider's own idle timer.
+/// The idle timer of the vendor behind an adapter that makes hosts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Idle {
-    /// It stops a sandbox after a time without activity.
+    /// It stops a host after a time without activity.
     Activity,
-    /// It stops a sandbox a fixed time after it started.
+    /// It stops a host a fixed time after it started.
     Ttl,
     /// It has none.
     None,
 }
 
-/// An optional method of a sandbox provider, by its last word.
+/// An optional method of an adapter that makes hosts, by its last word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -582,12 +582,12 @@ pub enum Optional {
     Keepalive,
 }
 
-/// How `sandbox/channel` reaches a sandbox.
+/// How `hosts/channel` reaches a host.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Channel {
-    /// A local command whose standard input and output reach the sandbox (§5.2).
+    /// A local command whose standard input and output reach the host (§5.2).
     Argv,
     /// Bytes the adapter carries itself (§5.3).
     Stream,
@@ -622,12 +622,12 @@ mod tests {
     use super::*;
 
     fn adapter(unavailable: Option<&str>) -> Initialized {
-        let mut machine = serde_json::json!({"provides": "sandboxes", "keeps": "filesystem",
+        let mut machine = serde_json::json!({"provides": "hosts", "keeps": "filesystem",
             "idle": "activity", "optional": [], "channel": "argv", "os": "linux"});
         if let Some(why) = unavailable {
             machine["unavailable"] = why.into();
         }
-        serde_json::from_value(serde_json::json!({"protocol": 2,
+        serde_json::from_value(serde_json::json!({"protocol": 3,
             "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona", "short": "Dt"},
             "machine": machine}))
         .unwrap()
@@ -636,12 +636,12 @@ mod tests {
     /// An adapter that cannot work from this computer says why in one line (§3.2); absent,
     /// it can, and a line that is empty or more than one is not an answer.
     #[test]
-    fn a_sandbox_provider_says_in_one_line_why_it_is_unavailable() {
+    fn an_adapter_that_makes_hosts_says_in_one_line_why_it_is_unavailable() {
         assert_eq!(adapter(None).check(), Ok(()));
         let unavailable = adapter(Some("install an OpenSSH client"));
         assert_eq!(unavailable.check(), Ok(()));
-        let Some(Machine::Sandboxes(facts)) = &unavailable.machine else {
-            panic!("no sandbox facts");
+        let Some(Machine::Hosts(facts)) = &unavailable.machine else {
+            panic!("no host facts");
         };
         assert_eq!(
             facts.unavailable.as_deref(),

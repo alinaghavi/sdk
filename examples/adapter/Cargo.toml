@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 publish = false
-description = "The smallest Steery sandbox adapter: copy this folder to start one for your provider"
+description = "The smallest Steery adapter that makes hosts: copy this folder to start one for your vendor"
 
 [[bin]]
 name = "steery-adapter-example"

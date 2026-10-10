@@ -1,19 +1,19 @@
-//! The smallest sandbox adapter: a "provider" whose sandboxes are folders under
-//! `~/.example-sandboxes/<id>`, reached by running a command there with `sh`. It shows
-//! the shape of PROTOCOL.md §5.2 — list, ensure, start, stop, delete and a channel — with
-//! nothing between the adapter and its provider. An adapter for a real provider calls the
-//! provider's published API in each method, and refuses with `offline` while it cannot be
+//! The smallest adapter that makes hosts: a "vendor" whose hosts are folders under
+//! `~/.example-hosts/<id>`, reached by running a command there with `sh`. It shows the
+//! shape of PROTOCOL.md §5.2 — list, ensure, start, stop, delete and a channel — with
+//! nothing between the adapter and its vendor. An adapter for a real vendor calls the
+//! vendor's published API in each method, and refuses with `offline` while it cannot be
 //! reached.
 //!
 //! It declares one setting, `EXAMPLE_TOKEN`, to show how a person gives one: at `steery
-//! machine add example --setting EXAMPLE_TOKEN`.
+//! setup --adapter example-hosts --setting EXAMPLE_TOKEN`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use serde_json::Value;
-use steery_sdk::wire::{self, sandbox};
+use steery_sdk::wire::{self, hosts};
 use steery_sdk::{Error, PROTOCOL, Program, method, params, refusal, result};
 
 #[tokio::main(flavor = "current_thread")]
@@ -23,7 +23,7 @@ async fn main() -> std::io::Result<()> {
 
 #[derive(Default)]
 struct Example {
-    /// Where the sandboxes are: `~/.example-sandboxes`, from the home `initialize` gave.
+    /// Where the hosts are: `~/.example-hosts`, from the home `initialize` gave.
     root: OnceLock<PathBuf>,
 }
 
@@ -34,20 +34,20 @@ impl Program for Example {
                 "this adapter speaks protocol {PROTOCOL}"
             )));
         }
-        let _ = self.root.set(params.home.join(".example-sandboxes"));
+        let _ = self.root.set(params.home.join(".example-hosts"));
         Ok(wire::Initialized {
             protocol: PROTOCOL,
             program: wire::ProgramInfo {
-                id: "example-sandboxes".parse().map_err(Error::invalid)?,
+                id: "example-hosts".parse().map_err(Error::invalid)?,
                 kind: wire::Kind::Machine,
                 release: env!("CARGO_PKG_VERSION").into(),
-                label: "Example sandboxes".into(),
+                label: "Example hosts".into(),
                 short: "Ex".into(),
                 tint: None,
                 mark: None,
             },
             harness: None,
-            machine: Some(wire::Machine::Sandboxes(wire::SandboxFacts {
+            machine: Some(wire::Machine::Hosts(wire::HostFacts {
                 keeps: wire::Survives::Filesystem,
                 persist: None,
                 idle: wire::Idle::None,
@@ -60,45 +60,45 @@ impl Program for Example {
                 name: "EXAMPLE_TOKEN".into(),
                 secret: true,
                 required: false,
-                about: "A token for the provider; this example reads none".into(),
+                about: "A token for the vendor; this example reads none".into(),
             }],
         })
     }
 
     async fn call(&self, method: &str, given: Value) -> Result<Value, Error> {
         match method {
-            method::SANDBOXES_LIST => {
-                let asked: sandbox::List = params(given)?;
-                result(sandbox::Listed {
-                    sandboxes: self.list(asked.labels.as_ref()),
+            method::HOSTS_LIST => {
+                let asked: hosts::List = params(given)?;
+                result(hosts::Listed {
+                    hosts: self.list(asked.labels.as_ref()),
                 })
             }
-            method::SANDBOX_ENSURE => {
-                let asked: sandbox::Ensure = params(given)?;
+            method::HOSTS_ENSURE => {
+                let asked: hosts::Ensure = params(given)?;
                 let folder = self.folder(&asked.key)?;
                 std::fs::create_dir_all(&folder).map_err(failed)?;
                 let labels = serde_json::to_vec(&asked.labels).map_err(failed)?;
                 std::fs::write(folder.join(".labels.json"), labels).map_err(failed)?;
-                result(sandbox::Named { sandbox: asked.key })
+                result(hosts::Named { host: asked.key })
             }
-            method::SANDBOX_START | method::SANDBOX_STOP => {
-                let asked: sandbox::Target = params(given)?;
-                self.existing(&asked.sandbox)?;
-                // A folder is always running; a provider says its own word here.
-                result(sandbox::State {
+            method::HOSTS_START | method::HOSTS_STOP => {
+                let asked: hosts::Target = params(given)?;
+                self.existing(&asked.host)?;
+                // A folder is always running; a vendor says its own word here.
+                result(hosts::State {
                     state: "started".into(),
                 })
             }
-            method::SANDBOX_DELETE => {
-                let asked: sandbox::Target = params(given)?;
-                std::fs::remove_dir_all(self.existing(&asked.sandbox)?).map_err(failed)?;
-                result(sandbox::State {
+            method::HOSTS_DELETE => {
+                let asked: hosts::Target = params(given)?;
+                std::fs::remove_dir_all(self.existing(&asked.host)?).map_err(failed)?;
+                result(hosts::State {
                     state: "deleted".into(),
                 })
             }
-            method::SANDBOX_CHANNEL => {
-                let asked: sandbox::Channel = params(given)?;
-                let folder = self.existing(&asked.sandbox)?;
+            method::HOSTS_CHANNEL => {
+                let asked: hosts::Channel = params(given)?;
+                let folder = self.existing(&asked.host)?;
                 let mut argv = vec![
                     "sh".to_owned(),
                     "-c".to_owned(),
@@ -107,7 +107,7 @@ impl Program for Example {
                     folder.display().to_string(),
                 ];
                 argv.extend(asked.command);
-                result(sandbox::Reach::Argv {
+                result(hosts::Reach::Argv {
                     argv,
                     env: BTreeMap::new(),
                 })
@@ -118,14 +118,14 @@ impl Program for Example {
 }
 
 impl Example {
-    /// The folder of the sandbox `id`; an id that is no plain name is refused.
+    /// The folder of the host `id`; an id that is no plain name is refused.
     fn folder(&self, id: &str) -> Result<PathBuf, Error> {
         let plain = !id.is_empty()
             && id
                 .bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
         if !plain {
-            return Err(Error::invalid(format!("{id:?} is no sandbox id")));
+            return Err(Error::invalid(format!("{id:?} is no host id")));
         }
         let root = self
             .root
@@ -134,7 +134,7 @@ impl Example {
         Ok(root.join(id))
     }
 
-    /// The folder of the sandbox `id`, which must exist.
+    /// The folder of the host `id`, which must exist.
     fn existing(&self, id: &str) -> Result<PathBuf, Error> {
         let folder = self.folder(id)?;
         if folder.is_dir() {
@@ -142,13 +142,13 @@ impl Example {
         } else {
             Err(Error::refused(
                 refusal::NOT_FOUND,
-                format!("no sandbox {id}"),
+                format!("no host {id}"),
             ))
         }
     }
 
-    /// Every sandbox carrying each of `labels`.
-    fn list(&self, labels: Option<&BTreeMap<String, String>>) -> Vec<sandbox::Sandbox> {
+    /// Every host carrying each of `labels`.
+    fn list(&self, labels: Option<&BTreeMap<String, String>>) -> Vec<hosts::Host> {
         let Some(Ok(entries)) = self.root.get().map(std::fs::read_dir) else {
             return Vec::new();
         };
@@ -171,8 +171,8 @@ impl Example {
                     .duration_since(std::time::UNIX_EPOCH)
                     .ok()?
                     .as_millis() as u64;
-                wanted.then_some(sandbox::Sandbox {
-                    sandbox: id,
+                wanted.then_some(hosts::Host {
+                    host: id,
                     state: "started".into(),
                     labels: kept,
                     created_at,
@@ -182,7 +182,7 @@ impl Example {
     }
 }
 
-/// A file operation that failed, as the refusal a provider's failure is.
+/// A file operation that failed, as the refusal a vendor's failure is.
 fn failed(error: impl std::fmt::Display) -> Error {
     Error::refused(refusal::REFUSED, error.to_string())
 }

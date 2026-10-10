@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::refusal;
-use crate::wire::{self, harness, host, process, sandbox};
+use crate::wire::{self, harness, host, hosts, process};
 
 /// A request of the protocol.
 pub trait Method {
@@ -141,42 +141,42 @@ requests! {
     /// Stop and remove a service (§5.1).
     ServiceRemove, SERVICE_REMOVE = "service/remove": process::Service => wire::Empty, seconds(30), [REFUSED];
 
-    /// The provider's sandboxes (§5.2).
-    SandboxesList, SANDBOXES_LIST = "sandboxes/list": sandbox::List => sandbox::Listed, seconds(60),
+    /// The adapter's hosts (§5.2).
+    HostsList, HOSTS_LIST = "hosts/list": hosts::List => hosts::Listed, seconds(60),
         [OFFLINE, REFUSED];
-    /// The sandbox for a key, made where none is (§5.2).
-    SandboxEnsure, SANDBOX_ENSURE = "sandbox/ensure": sandbox::Ensure => sandbox::Named, seconds(300),
+    /// The host for a key, made where none is (§5.2).
+    HostsEnsure, HOSTS_ENSURE = "hosts/ensure": hosts::Ensure => hosts::Named, seconds(300),
         [OFFLINE, REFUSED, START_FAILED, NO_PLACE];
-    /// Start a sandbox (§5.2).
-    SandboxStart, SANDBOX_START = "sandbox/start": sandbox::Target => sandbox::State, seconds(300),
+    /// Start a host (§5.2).
+    HostsStart, HOSTS_START = "hosts/start": hosts::Target => hosts::State, seconds(300),
         [OFFLINE, REFUSED, NOT_FOUND, START_FAILED];
-    /// Stop a sandbox (§5.2).
-    SandboxStop, SANDBOX_STOP = "sandbox/stop": sandbox::Target => sandbox::State, seconds(60),
+    /// Stop a host (§5.2).
+    HostsStop, HOSTS_STOP = "hosts/stop": hosts::Target => hosts::State, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
-    /// Delete a sandbox (§5.2).
-    SandboxDelete, SANDBOX_DELETE = "sandbox/delete": sandbox::Target => sandbox::State, seconds(60),
+    /// Delete a host (§5.2).
+    HostsDelete, HOSTS_DELETE = "hosts/delete": hosts::Target => hosts::State, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
-    /// Archive a sandbox, where the provider can (§5.2).
-    SandboxArchive, SANDBOX_ARCHIVE = "sandbox/archive": sandbox::Target => sandbox::State, seconds(300),
+    /// Archive a host, where the adapter can (§5.2).
+    HostsArchive, HOSTS_ARCHIVE = "hosts/archive": hosts::Target => hosts::State, seconds(300),
         [OFFLINE, REFUSED, NOT_FOUND];
-    /// Pause a sandbox, where the provider can (§5.2).
-    SandboxPause, SANDBOX_PAUSE = "sandbox/pause": sandbox::Target => sandbox::State, seconds(60),
+    /// Pause a host, where the adapter can (§5.2).
+    HostsPause, HOSTS_PAUSE = "hosts/pause": hosts::Target => hosts::State, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
-    /// Fork a sandbox, where the provider can (§5.2).
-    SandboxFork, SANDBOX_FORK = "sandbox/fork": sandbox::Target => sandbox::Named, seconds(60),
+    /// Fork a host, where the adapter can (§5.2).
+    HostsFork, HOSTS_FORK = "hosts/fork": hosts::Target => hosts::Named, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND, START_FAILED];
-    /// Keep a sandbox from going idle, where the provider can (§5.2).
-    SandboxKeepalive, SANDBOX_KEEPALIVE = "sandbox/keepalive": sandbox::Target => wire::Empty, seconds(60),
+    /// Keep a host from going idle, where the adapter can (§5.2).
+    HostsKeepalive, HOSTS_KEEPALIVE = "hosts/keepalive": hosts::Target => wire::Empty, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
-    /// Write a file into a sandbox (§5.2).
-    SandboxPut, SANDBOX_PUT = "sandbox/put": sandbox::Put => wire::Empty, seconds(300), [OFFLINE, NOT_FOUND, REFUSED];
-    /// A way to a command's standard input and output in a sandbox (§5.2).
-    SandboxChannel, SANDBOX_CHANNEL = "sandbox/channel": sandbox::Channel => sandbox::Reach, seconds(60),
+    /// Write a file into a host (§5.2).
+    HostsPut, HOSTS_PUT = "hosts/put": hosts::Put => wire::Empty, seconds(300), [OFFLINE, NOT_FOUND, REFUSED];
+    /// A way to a command's standard input and output in a host (§5.2).
+    HostsChannel, HOSTS_CHANNEL = "hosts/channel": hosts::Channel => hosts::Reach, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
     /// The runtime's bytes for a `stream` channel (§5.3).
-    StreamWrite, STREAM_WRITE = "stream/write": sandbox::StreamWrite => wire::Empty, seconds(60), [];
+    StreamWrite, STREAM_WRITE = "stream/write": hosts::StreamWrite => wire::Empty, seconds(60), [];
     /// The runtime ends a `stream` channel (§5.3).
-    StreamClose, STREAM_CLOSE = "stream/close": sandbox::StreamClose => wire::Empty, seconds(10), [];
+    StreamClose, STREAM_CLOSE = "stream/close": hosts::StreamClose => wire::Empty, seconds(10), [];
 
     /// The channel's first request (§6.1).
     HostHello, HOST_HELLO = "host/hello": host::Hello => host::Welcome, seconds(10), [];

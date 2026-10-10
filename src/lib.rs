@@ -23,7 +23,7 @@ use tokio::io::{AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
 
 /// The protocol version this crate speaks.
-pub const PROTOCOL: u32 = 2;
+pub const PROTOCOL: u32 = 3;
 
 /// The words a program refuses with (PROTOCOL.md §8). The runtime and the server own what
 /// each one means; an unknown word reaches the person.

@@ -10,14 +10,15 @@ and the means to write one.
 |---|---|
 | [PROTOCOL.md](PROTOCOL.md) | The protocol: every message, shape, refusal word and bound. |
 | [`steery-sdk`](src/lib.rs) | The Rust crate: the wire types, `serve` (a program's loop), the runtime's client, and the release manifest. |
-| [schema/protocol-v2.json](schema/protocol-v2.json) | Every shape as JSON Schema. |
+| [schema/protocol-v3.json](schema/protocol-v3.json) | Every shape as JSON Schema. |
 | [examples/driver](examples/driver) | The smallest driver. |
-| [examples/adapter](examples/adapter) | The smallest sandbox adapter. |
+| [examples/adapter](examples/adapter) | The smallest adapter that makes hosts. |
 
 Steery's own programs are written the same way, and are the fullest examples:
 [steery-dev/drivers](https://github.com/steery-dev/drivers) (omp, pi, Claude Code,
 Codex) and [steery-dev/adapters](https://github.com/steery-dev/adapters) (macOS, Linux,
-Daytona, OpenSandbox). Steery treats them exactly as it treats yours.
+and the cloud vendors' adapters, Daytona's among them). Steery treats them exactly as it
+treats yours.
 
 ## The rules
 
@@ -34,7 +35,7 @@ Daytona, OpenSandbox). Steery treats them exactly as it treats yours.
    SDK by git instead of by path:
 
    ```toml
-   steery-sdk = { git = "https://github.com/steery-dev/sdk", tag = "v2.0.0" }
+   steery-sdk = { git = "https://github.com/steery-dev/sdk", tag = "v3.0.0" }
    ```
 
 2. Change the id, label and facts in `initialize` to your harness's (PROTOCOL.md §3.1),
@@ -57,13 +58,14 @@ Daytona, OpenSandbox). Steery treats them exactly as it treats yours.
 
 ## Writing an adapter
 
-The same, from [examples/adapter](examples/adapter): a sandbox provider answers PROTOCOL.md
-§5.2 (`sandboxes/list`, `sandbox/ensure`, `start`, `stop`, `delete`, `channel`) over your
-provider's own API; an operating system answers §5.1. A sandbox machine is then:
+The same, from [examples/adapter](examples/adapter): an adapter that makes hosts answers
+PROTOCOL.md §5.2 (`hosts/list`, `hosts/ensure`, `start`, `stop`, `delete`, `channel`) over
+your vendor's own API; an operating system answers §5.1. A computer whose work runs in
+your adapter's hosts is then:
 
 ```sh
 steery programs add <your release>
-steery machine add <id> --setting YOUR_API_KEY
+steery setup --adapter <id> --setting YOUR_API_KEY
 ```
 
 ## Publishing
@@ -73,7 +75,7 @@ target (PROTOCOL.md §7.1). Build each target, then let `steery` write the archi
 manifest:
 
 ```sh
-cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.30   # runs in any sandbox
+cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.30   # runs in any made host
 cargo build --release --target aarch64-apple-darwin
 steery programs pack --release v0.1.0 --out dist \
   x86_64-unknown-linux-gnu=target/x86_64-unknown-linux-gnu/release \
@@ -87,8 +89,8 @@ Anyone then adds every program of your latest release, and follows its new ones,
 steery programs add https://github.com/<you>/<repo>
 ```
 
-A Linux build for `x86_64-unknown-linux-gnu` is what a sandbox machine's sandboxes run:
-publish one, and your driver works in Daytona and OpenSandbox sandboxes too.
+A Linux build for `x86_64-unknown-linux-gnu` is what the hosts an adapter makes run:
+publish one, and your driver works in Daytona's hosts and every other cloud vendor's too.
 
 ## Licence
 

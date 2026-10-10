@@ -1,12 +1,12 @@
 //! Writes one JSON Schema document holding every wire type and the release manifest under
 //! `$defs` to standard output: `cargo run --features schema --example schema`. Its output is
-//! `schema/protocol-v2.json`.
+//! `schema/protocol-v3.json`.
 
 use schemars::SchemaGenerator;
 use schemars::generate::SchemaSettings;
 use serde_json::{Value, json};
 use steery_sdk::release;
-use steery_sdk::wire::{self, door, harness, host, process, sandbox};
+use steery_sdk::wire::{self, door, harness, host, hosts, process};
 
 fn main() {
     let mut generator = SchemaGenerator::new(SchemaSettings::draft2020_12());
@@ -32,7 +32,7 @@ fn main() {
         wire::ProcessFacts,
         wire::Os,
         wire::ServiceManager,
-        wire::SandboxFacts,
+        wire::HostFacts,
         wire::Survives,
         wire::Idle,
         wire::Optional,
@@ -166,20 +166,20 @@ fn main() {
         process::PlannedFile,
         process::Service,
         process::Status,
-        sandbox::List,
-        sandbox::Listed,
-        sandbox::Sandbox,
-        sandbox::Ensure,
-        sandbox::Source,
-        sandbox::Named,
-        sandbox::State,
-        sandbox::Put,
-        sandbox::Channel,
-        sandbox::Reach,
-        sandbox::StreamWrite,
-        sandbox::StreamClose,
-        sandbox::StreamData,
-        sandbox::StreamClosed,
+        hosts::List,
+        hosts::Listed,
+        hosts::Host,
+        hosts::Ensure,
+        hosts::Source,
+        hosts::Named,
+        hosts::State,
+        hosts::Put,
+        hosts::Channel,
+        hosts::Reach,
+        hosts::StreamWrite,
+        hosts::StreamClose,
+        hosts::StreamData,
+        hosts::StreamClosed,
         host::Hello,
         host::Welcome,
         host::FsStat,
@@ -221,9 +221,9 @@ fn main() {
         .collect();
     let document = json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://raw.githubusercontent.com/steery-dev/sdk/main/schema/protocol-v2.json",
+        "$id": "https://raw.githubusercontent.com/steery-dev/sdk/main/schema/protocol-v3.json",
         "title": "Protocol",
-        "description": "Every shape of the Steery program protocol, version 2 (PROTOCOL.md), and the release manifest programs are published by.",
+        "description": "Every shape of the Steery program protocol, version 3 (PROTOCOL.md), and the release manifest programs are published by.",
         "anyOf": refs,
         "$defs": defs,
     });

@@ -314,11 +314,11 @@
       "type": "string"
     },
     "Channel": {
-      "description": "How `sandbox/channel` reaches a sandbox.",
+      "description": "How `hosts/channel` reaches a host.",
       "oneOf": [
         {
           "const": "argv",
-          "description": "A local command whose standard input and output reach the sandbox (§5.2).",
+          "description": "A local command whose standard input and output reach the host (§5.2).",
           "type": "string"
         },
         {
@@ -704,7 +704,7 @@
     },
     "Ensure": {
       "additionalProperties": false,
-      "description": "`sandbox/ensure`: the sandbox for `key`, made where none is.",
+      "description": "`hosts/ensure`: the host for `key`, made where none is.",
       "properties": {
         "key": {
           "description": "What finds it again.",
@@ -724,7 +724,7 @@
               "$ref": "#/$defs/Source"
             }
           ],
-          "description": "What it is made from; absent: the provider's default."
+          "description": "What it is made from; absent: the adapter's default."
         }
       },
       "required": [
@@ -2093,6 +2093,40 @@
       ],
       "type": "object"
     },
+    "Host": {
+      "additionalProperties": false,
+      "description": "One host.",
+      "properties": {
+        "created_at": {
+          "description": "When it was made.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "host": {
+          "description": "The adapter's id for it.",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Its labels.",
+          "type": "object"
+        },
+        "state": {
+          "description": "Its state, in the vendor's own word.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "state",
+        "created_at"
+      ],
+      "type": "object"
+    },
     "HostCall": {
       "additionalProperties": false,
       "description": "`host/call`: a program's method, on the host.",
@@ -2145,6 +2179,51 @@
       "required": [
         "conn",
         "bytes"
+      ],
+      "type": "object"
+    },
+    "HostFacts": {
+      "additionalProperties": false,
+      "description": "The facts of an adapter that makes hosts.",
+      "properties": {
+        "channel": {
+          "$ref": "#/$defs/Channel",
+          "description": "How `hosts/channel` reaches a host."
+        },
+        "idle": {
+          "$ref": "#/$defs/Idle",
+          "description": "The vendor's own idle timer."
+        },
+        "keeps": {
+          "$ref": "#/$defs/Survives",
+          "description": "What survives `hosts/stop`."
+        },
+        "optional": {
+          "default": [],
+          "description": "The optional methods it has, by their last word.",
+          "items": {
+            "$ref": "#/$defs/Optional"
+          },
+          "type": "array"
+        },
+        "os": {
+          "$ref": "#/$defs/Os",
+          "description": "The operating system inside its hosts."
+        },
+        "persist": {
+          "description": "The only folder that survives, where `keeps` is `volume`.",
+          "type": "string"
+        },
+        "unavailable": {
+          "description": "Why no host of this adapter can be had from this computer, whatever the\nsettings: one line naming what to install or change. Absent: one can.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "keeps",
+        "idle",
+        "channel",
+        "os"
       ],
       "type": "object"
     },
@@ -2228,6 +2307,59 @@
       ],
       "type": "object"
     },
+    "HostsChannel": {
+      "additionalProperties": false,
+      "description": "`hosts/channel`: a local way to `command`'s standard input and output in a host.",
+      "properties": {
+        "command": {
+          "description": "The command inside it, its program first.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "host": {
+          "description": "The adapter's id for the host.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "command"
+      ],
+      "type": "object"
+    },
+    "HostsList": {
+      "additionalProperties": false,
+      "description": "`hosts/list`: the adapter's hosts.",
+      "properties": {
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Only those carrying every one of these labels.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "HostsListed": {
+      "additionalProperties": false,
+      "description": "The hosts `hosts/list` found.",
+      "properties": {
+        "hosts": {
+          "description": "Each one.",
+          "items": {
+            "$ref": "#/$defs/Host"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "hosts"
+      ],
+      "type": "object"
+    },
     "Identity": {
       "additionalProperties": false,
       "description": "How the runtime recognizes a harness's processes (§3.3).",
@@ -2254,16 +2386,16 @@
       "type": "object"
     },
     "Idle": {
-      "description": "A sandbox provider's own idle timer.",
+      "description": "The idle timer of the vendor behind an adapter that makes hosts.",
       "oneOf": [
         {
           "const": "activity",
-          "description": "It stops a sandbox after a time without activity.",
+          "description": "It stops a host after a time without activity.",
           "type": "string"
         },
         {
           "const": "ttl",
-          "description": "It stops a sandbox a fixed time after it started.",
+          "description": "It stops a host a fixed time after it started.",
           "type": "string"
         },
         {
@@ -2916,19 +3048,19 @@
         },
         {
           "additionalProperties": false,
-          "description": "A sandbox provider (§5.2).",
+          "description": "Hosts it makes, one for each conversation (§5.2).",
           "properties": {
             "channel": {
               "$ref": "#/$defs/Channel",
-              "description": "How `sandbox/channel` reaches a sandbox."
+              "description": "How `hosts/channel` reaches a host."
             },
             "idle": {
               "$ref": "#/$defs/Idle",
-              "description": "The provider's own idle timer."
+              "description": "The vendor's own idle timer."
             },
             "keeps": {
               "$ref": "#/$defs/Survives",
-              "description": "What survives `sandbox/stop`."
+              "description": "What survives `hosts/stop`."
             },
             "optional": {
               "default": [],
@@ -2940,18 +3072,18 @@
             },
             "os": {
               "$ref": "#/$defs/Os",
-              "description": "The operating system inside its sandboxes."
+              "description": "The operating system inside its hosts."
             },
             "persist": {
               "description": "The only folder that survives, where `keeps` is `volume`.",
               "type": "string"
             },
             "provides": {
-              "const": "sandboxes",
+              "const": "hosts",
               "type": "string"
             },
             "unavailable": {
-              "description": "Why no sandbox of this provider can be had from this computer, whatever the\nsettings: one line naming what to install or change. Absent: one can.",
+              "description": "Why no host of this adapter can be had from this computer, whatever the\nsettings: one line naming what to install or change. Absent: one can.",
               "type": "string"
             }
           },
@@ -3199,15 +3331,15 @@
     },
     "Named": {
       "additionalProperties": false,
-      "description": "A sandbox, as `sandbox/ensure` and `sandbox/fork` answer it.",
+      "description": "A host, as `hosts/ensure` and `hosts/fork` answer it.",
       "properties": {
-        "sandbox": {
-          "description": "The provider's id for it.",
+        "host": {
+          "description": "The adapter's id for it.",
           "type": "string"
         }
       },
       "required": [
-        "sandbox"
+        "host"
       ],
       "type": "object"
     },
@@ -3245,7 +3377,7 @@
       "type": "object"
     },
     "Optional": {
-      "description": "An optional method of a sandbox provider, by its last word.",
+      "description": "An optional method of an adapter that makes hosts, by its last word.",
       "enum": [
         "archive",
         "pause",
@@ -3935,10 +4067,14 @@
     },
     "Put": {
       "additionalProperties": false,
-      "description": "`sandbox/put`: write a file into a sandbox. Its result is [`super::Empty`].",
+      "description": "`hosts/put`: write a file into a host. Its result is [`super::Empty`].",
       "properties": {
         "content": {
           "description": "Its whole content, base64.",
+          "type": "string"
+        },
+        "host": {
+          "description": "The adapter's id for the host.",
           "type": "string"
         },
         "mode": {
@@ -3950,14 +4086,10 @@
         "path": {
           "description": "The absolute file inside it.",
           "type": "string"
-        },
-        "sandbox": {
-          "description": "The provider's id for the sandbox.",
-          "type": "string"
         }
       },
       "required": [
-        "sandbox",
+        "host",
         "path",
         "content",
         "mode"
@@ -4586,138 +4718,6 @@
       },
       "type": "object"
     },
-    "Sandbox": {
-      "additionalProperties": false,
-      "description": "One sandbox.",
-      "properties": {
-        "created_at": {
-          "description": "When it was made.",
-          "format": "uint64",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "labels": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "description": "Its labels.",
-          "type": "object"
-        },
-        "sandbox": {
-          "description": "The provider's id for it.",
-          "type": "string"
-        },
-        "state": {
-          "description": "Its state, in the provider's own word.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "sandbox",
-        "state",
-        "created_at"
-      ],
-      "type": "object"
-    },
-    "SandboxChannel": {
-      "additionalProperties": false,
-      "description": "`sandbox/channel`: a local way to `command`'s standard input and output in a sandbox.",
-      "properties": {
-        "command": {
-          "description": "The command inside it, its program first.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "sandbox": {
-          "description": "The provider's id for the sandbox.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "sandbox",
-        "command"
-      ],
-      "type": "object"
-    },
-    "SandboxFacts": {
-      "additionalProperties": false,
-      "description": "A sandbox provider's facts.",
-      "properties": {
-        "channel": {
-          "$ref": "#/$defs/Channel",
-          "description": "How `sandbox/channel` reaches a sandbox."
-        },
-        "idle": {
-          "$ref": "#/$defs/Idle",
-          "description": "The provider's own idle timer."
-        },
-        "keeps": {
-          "$ref": "#/$defs/Survives",
-          "description": "What survives `sandbox/stop`."
-        },
-        "optional": {
-          "default": [],
-          "description": "The optional methods it has, by their last word.",
-          "items": {
-            "$ref": "#/$defs/Optional"
-          },
-          "type": "array"
-        },
-        "os": {
-          "$ref": "#/$defs/Os",
-          "description": "The operating system inside its sandboxes."
-        },
-        "persist": {
-          "description": "The only folder that survives, where `keeps` is `volume`.",
-          "type": "string"
-        },
-        "unavailable": {
-          "description": "Why no sandbox of this provider can be had from this computer, whatever the\nsettings: one line naming what to install or change. Absent: one can.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "keeps",
-        "idle",
-        "channel",
-        "os"
-      ],
-      "type": "object"
-    },
-    "SandboxList": {
-      "additionalProperties": false,
-      "description": "`sandboxes/list`: the provider's sandboxes.",
-      "properties": {
-        "labels": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Only those carrying every one of these labels.",
-          "type": "object"
-        }
-      },
-      "type": "object"
-    },
-    "SandboxListed": {
-      "additionalProperties": false,
-      "description": "The sandboxes `sandboxes/list` found.",
-      "properties": {
-        "sandboxes": {
-          "description": "Each one.",
-          "items": {
-            "$ref": "#/$defs/Sandbox"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "sandboxes"
-      ],
-      "type": "object"
-    },
     "Say": {
       "additionalProperties": false,
       "description": "`say`: words into a running conversation.",
@@ -5185,11 +5185,11 @@
       "type": "string"
     },
     "Source": {
-      "description": "What a sandbox is made from.",
+      "description": "What a host is made from.",
       "oneOf": [
         {
           "additionalProperties": false,
-          "description": "A provider's snapshot, by name.",
+          "description": "A vendor's snapshot, by name.",
           "properties": {
             "snapshot": {
               "type": "string"
@@ -5344,10 +5344,10 @@
     },
     "State": {
       "additionalProperties": false,
-      "description": "A sandbox's state after `sandbox/start`, `stop`, `delete`, `archive` or `pause`.",
+      "description": "A host's state after `hosts/start`, `stop`, `delete`, `archive` or `pause`.",
       "properties": {
         "state": {
-          "description": "In the provider's own word.",
+          "description": "In the vendor's own word.",
           "type": "string"
         }
       },
@@ -5588,7 +5588,7 @@
       "type": "object"
     },
     "Survives": {
-      "description": "What survives a sandbox's stop.",
+      "description": "What survives a host's stop.",
       "oneOf": [
         {
           "const": "filesystem",
@@ -5821,7 +5821,7 @@
       ]
     }
   },
-  "$id": "https://raw.githubusercontent.com/steery-dev/sdk/main/schema/protocol-v2.json",
+  "$id": "https://raw.githubusercontent.com/steery-dev/sdk/main/schema/protocol-v3.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "anyOf": [
     {
@@ -6014,6 +6014,9 @@
       "$ref": "#/$defs/HookRead"
     },
     {
+      "$ref": "#/$defs/Host"
+    },
+    {
       "$ref": "#/$defs/HostCall"
     },
     {
@@ -6023,10 +6026,22 @@
       "$ref": "#/$defs/HostData"
     },
     {
+      "$ref": "#/$defs/HostFacts"
+    },
+    {
       "$ref": "#/$defs/HostHello"
     },
     {
       "$ref": "#/$defs/HostWelcome"
+    },
+    {
+      "$ref": "#/$defs/HostsChannel"
+    },
+    {
+      "$ref": "#/$defs/HostsList"
+    },
+    {
+      "$ref": "#/$defs/HostsListed"
     },
     {
       "$ref": "#/$defs/Identity"
@@ -6257,21 +6272,6 @@
       "$ref": "#/$defs/Sampled"
     },
     {
-      "$ref": "#/$defs/Sandbox"
-    },
-    {
-      "$ref": "#/$defs/SandboxChannel"
-    },
-    {
-      "$ref": "#/$defs/SandboxFacts"
-    },
-    {
-      "$ref": "#/$defs/SandboxList"
-    },
-    {
-      "$ref": "#/$defs/SandboxListed"
-    },
-    {
       "$ref": "#/$defs/Say"
     },
     {
@@ -6407,6 +6407,6 @@
       "$ref": "#/$defs/Voice"
     }
   ],
-  "description": "Every shape of the Steery program protocol, version 2 (PROTOCOL.md), and the release manifest programs are published by.",
+  "description": "Every shape of the Steery program protocol, version 3 (PROTOCOL.md), and the release manifest programs are published by.",
   "title": "Protocol"
 }

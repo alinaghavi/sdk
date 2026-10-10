@@ -1,17 +1,17 @@
-//! A sandbox provider's methods (PROTOCOL.md §5.2) and its `stream` channel (§5.3). A
-//! sandbox is named by the provider's own id for it.
+//! The methods of an adapter that makes hosts (PROTOCOL.md §5.2) and its `stream` channel
+//! (§5.3). A host is named by the adapter's own id for it.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-/// `sandboxes/list`: the provider's sandboxes.
+/// `hosts/list`: the adapter's hosts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
-    schemars(rename = "SandboxList")
+    schemars(rename = "HostsList")
 )]
 #[serde(deny_unknown_fields)]
 pub struct List {
@@ -20,27 +20,27 @@ pub struct List {
     pub labels: Option<BTreeMap<String, String>>,
 }
 
-/// The sandboxes `sandboxes/list` found.
+/// The hosts `hosts/list` found.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
-    schemars(rename = "SandboxListed")
+    schemars(rename = "HostsListed")
 )]
 #[serde(deny_unknown_fields)]
 pub struct Listed {
     /// Each one.
-    pub sandboxes: Vec<Sandbox>,
+    pub hosts: Vec<Host>,
 }
 
-/// One sandbox.
+/// One host.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
-pub struct Sandbox {
-    /// The provider's id for it.
-    pub sandbox: String,
-    /// Its state, in the provider's own word.
+pub struct Host {
+    /// The adapter's id for it.
+    pub host: String,
+    /// Its state, in the vendor's own word.
     pub state: String,
     /// Its labels.
     #[serde(default)]
@@ -49,14 +49,14 @@ pub struct Sandbox {
     pub created_at: u64,
 }
 
-/// `sandbox/ensure`: the sandbox for `key`, made where none is.
+/// `hosts/ensure`: the host for `key`, made where none is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Ensure {
     /// What finds it again.
     pub key: String,
-    /// What it is made from; absent: the provider's default.
+    /// What it is made from; absent: the adapter's default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<Source>,
     /// Its labels.
@@ -64,46 +64,46 @@ pub struct Ensure {
     pub labels: BTreeMap<String, String>,
 }
 
-/// What a sandbox is made from.
+/// What a host is made from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum Source {
-    /// A provider's snapshot, by name.
+    /// A vendor's snapshot, by name.
     Snapshot(String),
     /// A container image, by reference.
     Image(String),
 }
 
-/// A sandbox, as `sandbox/ensure` and `sandbox/fork` answer it.
+/// A host, as `hosts/ensure` and `hosts/fork` answer it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Named {
-    /// The provider's id for it.
-    pub sandbox: String,
+    /// The adapter's id for it.
+    pub host: String,
 }
 
-/// The parameters of `sandbox/start`, `stop`, `delete`, `archive`, `pause`, `fork` and
+/// The parameters of `hosts/start`, `stop`, `delete`, `archive`, `pause`, `fork` and
 /// `keepalive`.
 pub type Target = Named;
 
-/// A sandbox's state after `sandbox/start`, `stop`, `delete`, `archive` or `pause`.
+/// A host's state after `hosts/start`, `stop`, `delete`, `archive` or `pause`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct State {
-    /// In the provider's own word.
+    /// In the vendor's own word.
     pub state: String,
 }
 
-/// `sandbox/put`: write a file into a sandbox. Its result is [`super::Empty`].
+/// `hosts/put`: write a file into a host. Its result is [`super::Empty`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Put {
-    /// The provider's id for the sandbox.
-    pub sandbox: String,
+    /// The adapter's id for the host.
+    pub host: String,
     /// The absolute file inside it.
     pub path: PathBuf,
     /// Its whole content, base64.
@@ -112,17 +112,17 @@ pub struct Put {
     pub mode: u32,
 }
 
-/// `sandbox/channel`: a local way to `command`'s standard input and output in a sandbox.
+/// `hosts/channel`: a local way to `command`'s standard input and output in a host.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "schema",
     derive(schemars::JsonSchema),
-    schemars(rename = "SandboxChannel")
+    schemars(rename = "HostsChannel")
 )]
 #[serde(deny_unknown_fields)]
 pub struct Channel {
-    /// The provider's id for the sandbox.
-    pub sandbox: String,
+    /// The adapter's id for the host.
+    pub host: String,
     /// The command inside it, its program first.
     pub command: Vec<String>,
 }
