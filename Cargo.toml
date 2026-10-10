@@ -1,11 +1,17 @@
 [package]
 name = "steery-sdk"
-# The SDK's own version, not the product's: a program's Cargo.lock records it, so it moves
-# only when this crate's API does (protocol v1), never with deploy/version.sh.
+# The SDK's own version, not Steery's: a program's Cargo.lock records it, so it moves only
+# when this crate's API does. Its major is the protocol it speaks (PROTOCOL.md).
 version = "1.0.0"
-edition.workspace = true
+edition = "2024"
+rust-version = "1.89"
 license = "MIT"
-description = "The program protocol: the wire types, the stdio server a driver or an adapter runs, and the client the Steery runtime speaks it with"
+repository = "https://github.com/steery-dev/sdk"
+readme = "README.md"
+description = "Steery's program protocol: the wire types, the stdio server a driver or an adapter runs, the client the Steery runtime speaks it with, and the release manifest programs are published by"
+keywords = ["steery", "agents", "protocol", "json-rpc"]
+categories = ["development-tools"]
+include = ["src/**", "examples/**", "Cargo.toml", "README.md", "PROTOCOL.md", "LICENSE"]
 
 [lib]
 name = "steery_sdk"
@@ -14,7 +20,7 @@ name = "steery_sdk"
 ## JSON Schema derivation (schemars) for every wire type.
 schema = ["dep:schemars"]
 
-# Writes `sdk/schema/protocol-v1.json`.
+# Writes `schema/protocol-v1.json`.
 [[example]]
 name = "schema"
 required-features = ["schema"]
@@ -31,5 +37,10 @@ schemars = { version = "1", optional = true }
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
-[lints]
-workspace = true
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[lints.clippy]
+too_many_arguments = "allow"
+result_large_err = "allow"
+type_complexity = "allow"

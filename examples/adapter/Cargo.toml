@@ -1,0 +1,20 @@
+[package]
+name = "steery-adapter-example"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "The smallest Steery sandbox adapter: copy this folder to start one for your provider"
+
+[[bin]]
+name = "steery-adapter-example"
+path = "main.rs"
+
+[dependencies]
+steery-sdk = { path = "../.." }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt"] }
+
+# A crate of its own, not a member of the SDK's: copied out, it builds as it is once
+# `steery-sdk` names the published crate (README.md, "Writing an adapter").
+[workspace]

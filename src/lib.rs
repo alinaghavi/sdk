@@ -1,15 +1,16 @@
-//! The program protocol (`specs/PROTOCOL.md`): the one contract between Steery's runtime
-//! and every driver and adapter.
+//! Steery's program protocol ([PROTOCOL.md](https://github.com/steery-dev/sdk/blob/main/PROTOCOL.md)):
+//! the one contract between Steery's runtime and every driver and adapter.
 //!
 //! A program is a child process speaking JSON-RPC 2.0 on its standard input and output,
 //! one JSON object per line. [`serve`] is that loop for a program written in Rust: it
 //! answers `initialize` and `shutdown`, keeps the answers to the last 256 ids, and hands
 //! every other method to a [`Program`]. [`client::Client`] is the runtime's side. [`wire`]
-//! holds every shape either side reads, and [`refusal`] the only words a program refuses
-//! with.
+//! holds every shape either side reads, [`refusal`] the only words a program refuses
+//! with, and [`release`] the manifest a release of programs is published by.
 
 pub mod client;
 mod frame;
+pub mod release;
 pub mod wire;
 
 use std::collections::{HashMap, VecDeque};

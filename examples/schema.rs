@@ -1,10 +1,11 @@
-//! Writes one JSON Schema document holding every wire type under `$defs` to standard
-//! output: `cargo run -p steery-sdk --features schema --example schema`. Its output is
-//! `sdk/schema/protocol-v1.json`.
+//! Writes one JSON Schema document holding every wire type and the release manifest under
+//! `$defs` to standard output: `cargo run --features schema --example schema`. Its output is
+//! `schema/protocol-v1.json`.
 
 use schemars::SchemaGenerator;
 use schemars::generate::SchemaSettings;
 use serde_json::{Value, json};
+use steery_sdk::release;
 use steery_sdk::wire::{self, door, harness, host, process, sandbox};
 
 fn main() {
@@ -204,6 +205,9 @@ fn main() {
         host::Credit,
         host::Close,
         host::CloseHow,
+        release::Manifest,
+        release::Program,
+        release::File,
     );
     let mut defs: serde_json::Map<String, Value> = generator.take_definitions(true);
     for schema in defs.values_mut() {
@@ -217,9 +221,9 @@ fn main() {
         .collect();
     let document = json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://steery.dev/schema/protocol-v1.json",
+        "$id": "https://raw.githubusercontent.com/steery-dev/sdk/main/schema/protocol-v1.json",
         "title": "Protocol",
-        "description": "Every shape of the Steery program protocol, version 1 (PROTOCOL.md).",
+        "description": "Every shape of the Steery program protocol, version 1 (PROTOCOL.md), and the release manifest programs are published by.",
         "anyOf": refs,
         "$defs": defs,
     });
@@ -227,25 +231,12 @@ fn main() {
     println!("{text}");
 }
 
-/// Shapes the schema for json-schema-to-typescript, keeping what it means. A schema that
-/// takes any JSON value (a `serde_json::Value`, which carries only its description) is
-/// marked `tsType: unknown`, which it would otherwise read as an object; a `$ref` beside a
-/// description goes into an `allOf`, which it would otherwise read as a new type; and an
-/// optional field takes no `null`, since it is absent, never `null` (PROTOCOL.md §2). A
-/// required field that may be `null` keeps it.
+/// Says what the shapes mean where schemars says more: an optional field takes no `null`,
+/// since it is absent, never `null` (PROTOCOL.md §2). A required field that may be `null`
+/// keeps it.
 fn tidy(schema: &mut Value) {
     match schema {
         Value::Object(map) => {
-            if map.len() == 1 && map.contains_key("description") {
-                map.insert("tsType".to_owned(), json!("unknown"));
-                return;
-            }
-            if map.len() > 1
-                && let Some(reference) = map.remove("$ref")
-            {
-                map.insert("allOf".to_owned(), json!([{ "$ref": reference }]));
-                return;
-            }
             let required: Vec<Value> = map
                 .get("required")
                 .and_then(Value::as_array)

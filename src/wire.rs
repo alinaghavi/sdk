@@ -65,17 +65,75 @@ pub struct Initialized {
 }
 
 impl Initialized {
-    /// What the shapes cannot say themselves (PROTOCOL.md §3): the kind answers its own
-    /// object and not the other's, a driver's levels each follow the one they need and
-    /// `live` comes exactly with a door, its executables are named, and its hook events are
-    /// unique. The first rule broken, in one line. The id checks itself ([`ProgramId`]).
+    /// What the shapes cannot say themselves (PROTOCOL.md §3): the program's label, short
+    /// name, tint and mark keep their bounds, the kind answers its own object and not the
+    /// other's, a driver's levels each follow the one they need and `live` comes exactly
+    /// with a door, its executables are named, and its hook events are unique. The first
+    /// rule broken, in one line. The id checks itself ([`ProgramId`]).
     pub fn check(&self) -> Result<(), String> {
+        self.program.check()?;
         match (self.program.kind, &self.harness, &self.machine) {
             (Kind::Harness, Some(harness), None) => harness.check(),
             (Kind::Machine, None, Some(machine)) => machine.check(),
             (Kind::Harness, _, _) => Err("a driver answers `harness` and no `machine`".into()),
             (Kind::Machine, _, _) => Err("an adapter answers `machine` and no `harness`".into()),
         }
+    }
+}
+
+impl ProgramInfo {
+    /// The longest `label`, in characters.
+    pub const LABEL_MAX: usize = 40;
+    /// The longest `short`, in characters.
+    pub const SHORT_MAX: usize = 3;
+    /// The longest `mark`, in bytes.
+    pub const MARK_MAX: usize = 4096;
+
+    fn check(&self) -> Result<(), String> {
+        let line = |text: &str, max: usize| {
+            !text.trim().is_empty()
+                && text.trim() == text
+                && !text.chars().any(char::is_control)
+                && text.chars().count() <= max
+        };
+        if !line(&self.label, Self::LABEL_MAX) {
+            return Err(format!(
+                "says a `label` that is not one line of 1 to {} characters",
+                Self::LABEL_MAX
+            ));
+        }
+        if !line(&self.short, Self::SHORT_MAX) {
+            return Err(format!(
+                "says a `short` that is not 1 to {} characters",
+                Self::SHORT_MAX
+            ));
+        }
+        if let Some(tint) = &self.tint {
+            let hex = tint.strip_prefix('#').unwrap_or_default();
+            if hex.len() != 6 || !hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) {
+                return Err(format!(
+                    "says a `tint` {tint:?} that is not `#rrggbb` in lowercase"
+                ));
+            }
+        }
+        if let Some(mark) = &self.mark {
+            let path = mark.trim();
+            if path.is_empty()
+                || mark.len() > Self::MARK_MAX
+                || !path.starts_with(['M', 'm'])
+                || !mark.bytes().all(|b| {
+                    b.is_ascii_digit()
+                        || b" \t\n,.-+eE".contains(&b)
+                        || b"MmZzLlHhVvCcSsQqTtAa".contains(&b)
+                })
+            {
+                return Err(format!(
+                    "says a `mark` that is not an SVG path's `d` of at most {} bytes",
+                    Self::MARK_MAX
+                ));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -224,23 +282,30 @@ impl schemars::JsonSchema for ProgramId {
     }
 }
 
-/// Who a program is.
+/// Who a program is, and how a person sees it: every surface Steery draws a harness or a
+/// machine on reads these and nothing else.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ProgramInfo {
-    /// What `Session.harness` names for a driver. A found program cannot take an official
-    /// one's id.
+    /// What `Session.harness` names for a driver, and a machine's adapter for an adapter.
     pub id: ProgramId,
     /// Driver or adapter.
     pub kind: Kind,
     /// The program's own release.
     pub release: String,
-    /// Its name as a person reads it.
+    /// Its name as a person reads it, one line of at most [`Self::LABEL_MAX`] characters:
+    /// `Claude Code`, `Daytona`.
     pub label: String,
-    /// A shorter name, where one is read.
+    /// Its name on a tile, one to [`Self::SHORT_MAX`] characters: `CC`.
+    pub short: String,
+    /// Its colour on a tile, `#rrggbb` in lowercase. Absent: Steery's neutral tint.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub short: Option<String>,
+    pub tint: Option<String>,
+    /// Its mark: the `d` of one SVG path in a 24 by 24 box, filled with the even-odd rule,
+    /// at most [`Self::MARK_MAX`] bytes. Absent: the tile shows `short`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mark: Option<String>,
 }
 
 /// What a program connects Steery to.
@@ -563,7 +628,7 @@ mod tests {
             machine["unavailable"] = why.into();
         }
         serde_json::from_value(serde_json::json!({"protocol": 1,
-            "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona"},
+            "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona", "short": "Dt"},
             "machine": machine}))
         .unwrap()
     }
@@ -584,6 +649,51 @@ mod tests {
         );
         for bad in ["", " ", "one\ntwo"] {
             assert!(adapter(Some(bad)).check().is_err(), "{bad:?}");
+        }
+    }
+
+    /// Every surface draws a program from its label, short name, tint and mark alone, so a
+    /// program says them within their bounds or is not read: a label of more than one line,
+    /// an empty or long short name, a tint that is not `#rrggbb`, a mark that is not an SVG
+    /// path or is longer than 4096 bytes.
+    #[test]
+    fn a_program_says_its_look_within_bounds() {
+        let with = |edit: &dyn Fn(&mut ProgramInfo)| {
+            let mut initialized = adapter(None);
+            edit(&mut initialized.program);
+            initialized.check()
+        };
+        assert_eq!(
+            with(&|p| {
+                p.tint = Some("#1f2937".into());
+                p.mark = Some("M4 4h16v16H4z M10 10h4v4h-4z".into());
+            }),
+            Ok(())
+        );
+        for (bad, why) in [
+            (
+                &(|p: &mut ProgramInfo| p.label = "Two\nlines".into()) as &dyn Fn(&mut ProgramInfo),
+                "a label of two lines",
+            ),
+            (
+                &|p| p.label = " Daytona".into(),
+                "a label with a leading space",
+            ),
+            (&|p| p.short = String::new(), "no short name"),
+            (&|p| p.short = "Dayt".into(), "a short name of four"),
+            (&|p| p.tint = Some("#1F2937".into()), "an uppercase tint"),
+            (&|p| p.tint = Some("navy".into()), "a named colour"),
+            (&|p| p.mark = Some("<svg/>".into()), "markup as a mark"),
+            (
+                &|p| p.mark = Some("4 4h16".into()),
+                "a path without a move first",
+            ),
+            (
+                &|p| p.mark = Some(format!("M0 0{}", " h1".repeat(2000))),
+                "a mark over 4096 bytes",
+            ),
+        ] {
+            assert!(with(bad).is_err(), "{why} is refused");
         }
     }
 }
