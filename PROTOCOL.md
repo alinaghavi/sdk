@@ -632,6 +632,7 @@ carries:
 | `pending?` | Words wait to go in. |
 | `typing?` | The person's editor holds text. Absent: it cannot say. |
 | `compacting`, `retrying` | The harness is compacting its context; waiting to retry a request. |
+| `jobs` | Background work running in the process that ends with it: jobs it runs and results waiting to be told. Absent: none. |
 | `model?`, `thinking?`, `context_left?` | What it runs on now; the share of its context window left. |
 | `calls` | `[{id, tool, since, children: [{id, tool}]}]`: the top-level calls running, oldest first, with calls running inside each; each `tool` named as a Call names it (§4.1), Steery's own as `mcp__steery__<tool>`. |
 | `ended` | `[{id, at}]`: top-level calls that ended lately, oldest first, at most 64. Their times are the calls' true ends, over a transcript's. |

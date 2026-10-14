@@ -2943,6 +2943,12 @@
           "description": "The door checked the conversation idle; absent: it cannot say.",
           "type": "boolean"
         },
+        "jobs": {
+          "description": "Background work running in the process that ends with it: jobs it runs and results\nwaiting to be told.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
         "model": {
           "description": "The model it runs on.",
           "type": "string"

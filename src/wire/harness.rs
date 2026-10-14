@@ -1457,6 +1457,10 @@ pub struct LiveState {
     /// The harness waits to retry a request.
     #[serde(default)]
     pub retrying: bool,
+    /// Background work running in the process that ends with it: jobs it runs and results
+    /// waiting to be told.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub jobs: u32,
     /// The model it runs on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -1478,6 +1482,11 @@ pub struct LiveState {
     /// Turns Steery's words began that ended, at most 16.
     #[serde(default)]
     pub settled: Vec<LiveSettled>,
+}
+
+/// Whether a count is none, which its field leaves out.
+fn is_zero(count: &u32) -> bool {
+    *count == 0
 }
 
 impl LiveState {
