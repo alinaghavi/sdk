@@ -12,6 +12,10 @@ pub const DOOR: u32 = 1;
 pub const PATH: &str = "/door";
 /// The longest frame either side reads.
 pub const FRAME_MAX: usize = 16 << 20;
+/// The variable naming the `compact` ask a one-shot run answers before its own turn.
+pub const COMPACT_VAR: &str = "STEERY_COMPACT";
+/// The file beside that ask its answer frame is written to.
+pub const COMPACTED_FILE: &str = "compacted.json";
 
 /// Close codes the runtime sends.
 pub mod close {

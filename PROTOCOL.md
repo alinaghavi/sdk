@@ -537,7 +537,8 @@ list it cannot read (its person must sign in first) is refused `refused` with th
 harness's line. The runtime keeps the last list.
 
 **`start`** starts nothing; it answers a launch plan. The runtime has made the turn's
-`folder`, writes the words to it, adds `STEERY_STARTED`, and starts the plan detached
+`folder`, writes the words to it, adds `STEERY_STARTED` (and `STEERY_COMPACT` where it
+compacts the conversation first, §4.4), and starts the plan detached
 through the operating-system adapter (§5.1), so a turn outlives a runtime restart and the
 stop ladder can prove it gone. `stdin: "words"` is the words' file. `reads` are folders
 outside `cwd` the turn reads. `worktree` asks for a new worktree for a fork or a new
@@ -732,6 +733,13 @@ forgotten.
   entry's time where it compacted. `forgot` the tokens estimated before the cut.
 - A sub-agent's copy answers `compact` `refused`. The runtime waits 30 s for a `compact`
   answer.
+- **A compact before a one-shot run's own turn.** A turn the runtime starts may carry
+  `STEERY_COMPACT=<file>`: a `compact` ask as the door carries it (`{t: "ask", id, op:
+  "compact", before, summary, least}`), in the turn's folder. The copy takes the variable
+  out of its own environment, so nothing it starts inherits it, answers the ask before its
+  turn's prompt runs as it would through the door, and writes the answer frame (`{t:
+  "answer", id, ok}`, or `refused` and `error`) to `compacted.json` in the same folder,
+  0600. A copy that cannot read the file writes nothing.
 - `refused` answers an op the copy does not know, an ask it cannot read, and words asked
   of a one-shot run before its own turn.
 
