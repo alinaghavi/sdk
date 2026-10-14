@@ -180,6 +180,40 @@
             "id"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Forget everything before a cut in favour of `summary`; answered with [`DoorCompacted`].",
+          "properties": {
+            "before": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "id": {
+              "type": "string"
+            },
+            "least": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "op": {
+              "const": "compact",
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "id",
+            "before",
+            "summary",
+            "least"
+          ],
+          "type": "object"
         }
       ]
     },
@@ -616,6 +650,29 @@
           "type": "string"
         }
       ]
+    },
+    "DoorCompacted": {
+      "additionalProperties": false,
+      "description": "What a door's compact did.",
+      "properties": {
+        "forgot": {
+          "description": "Estimated tokens forgotten; 0 where nothing was.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "from": {
+          "description": "Milliseconds since 1970: when the context starts after the ask.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "from",
+        "forgot"
+      ],
+      "type": "object"
     },
     "DoorMode": {
       "description": "Who is at a plugin's harness.",
@@ -4595,6 +4652,39 @@
                 "id"
               ],
               "type": "object"
+            },
+            {
+              "description": "Forget everything before a cut in favour of `summary`; answered with [`DoorCompacted`].",
+              "properties": {
+                "before": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "least": {
+                  "format": "uint64",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "op": {
+                  "const": "compact",
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "id",
+                "before",
+                "summary",
+                "least"
+              ],
+              "type": "object"
             }
           ],
           "properties": {
@@ -5886,6 +5976,9 @@
     },
     {
       "$ref": "#/$defs/Door"
+    },
+    {
+      "$ref": "#/$defs/DoorCompacted"
     },
     {
       "$ref": "#/$defs/DoorMode"

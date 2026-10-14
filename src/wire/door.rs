@@ -166,6 +166,8 @@ pub enum Ask {
     /// Where the conversation stands, in its own model's words; answered with
     /// [`super::harness::Text`].
     Recap { id: String },
+    /// Forget everything before a cut in favour of `summary`; answered with [`DoorCompacted`].
+    Compact { id: String, before: u64, summary: String, least: u64 },
 }
 
 /// When door words go in.
@@ -189,6 +191,17 @@ pub struct DoorStopped {
     /// Background jobs still running.
     #[serde(default)]
     pub running: Vec<String>,
+}
+
+/// What a door's compact did.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct DoorCompacted {
+    /// Milliseconds since 1970: when the context starts after the ask.
+    pub from: u64,
+    /// Estimated tokens forgotten; 0 where nothing was.
+    pub forgot: u64,
 }
 
 /// Refusal words of the door's own.

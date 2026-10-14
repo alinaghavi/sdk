@@ -709,6 +709,7 @@ forgotten.
 | `pick` | `model?, thinking?` | `{model?, thinking?}` read back | `selection-unsupported`, `model-missing`, `ending`, `no-answer`, `refused` |
 | `stop` | `say?` | `{stopped, running: [string]}`: whether a turn was stopped; background jobs still running | `other-turn` (`say` given and the turn running is not one that `say` began), `selection-unsupported`, `no-answer` (a turn still runs after 2.5 s), `ending`, `refused` |
 | `recap` | — | `{text}` | `model-missing`, `selection-unsupported`, `ending`, `refused` |
+| `compact` | `before, summary, least` | `{from, forgot}` | `harness-busy` (a turn runs: nothing done), `ending`, `refused` |
 
 - A say's `id` is the id `LiveState.turn.says` and `settled[].says` name. `throw`: one
   throw's words go in once, however often a say carrying it is asked.
@@ -716,6 +717,21 @@ forgotten.
 - `ending`: the copy is letting the conversation go and took nothing; it answers every ask
   so from then on. The runtime waits up to 15 s for its connection to close, then goes the
   next way.
+- `compact`'s `before` is milliseconds since 1970: the cut is the last entry at or before
+  it that is a message of the person or the assistant, never a tool result, after the
+  latest compaction and after the context's start. The context starts at the latest
+  compaction's first kept entry, else at the first entry.
+- `summary` replaces everything before the cut; the plugin puts the summary of the latest
+  compaction, which the cut drops, before it. Only its own compaction is answered by the
+  plugin's hook with this summary and cut, so no model runs; every other compaction passes
+  the hook untouched.
+- `least` is tokens: no such cut, fewer estimated between the context's start and the cut
+  (characters / 4), or the harness declining, and nothing is done: `{from: <the context's
+  start>, forgot: 0}`.
+- `from` is milliseconds since 1970, when the context starts after the ask: the cut
+  entry's time where it compacted. `forgot` the tokens estimated before the cut.
+- A sub-agent's copy answers `compact` `refused`. The runtime waits 30 s for a `compact`
+  answer.
 - `refused` answers an op the copy does not know, an ask it cannot read, and words asked
   of a one-shot run before its own turn.
 

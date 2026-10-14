@@ -141,6 +141,7 @@ fn main() {
         door::Ask,
         door::DoorSayMode,
         door::DoorStopped,
+        door::DoorCompacted,
         door::Card,
         door::SettledCard,
         door::CardStatus,
