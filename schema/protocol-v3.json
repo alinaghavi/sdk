@@ -3986,6 +3986,10 @@
           "description": "Its whole environment.",
           "type": "object"
         },
+        "held": {
+          "description": "Its standard input never ends; `stdin` is absent. An adapter refuses `invalid` where\nboth are set.",
+          "type": "boolean"
+        },
         "scope": {
           "description": "The service (its label) whose share of the CPU it runs in, where there is one.",
           "type": "string"
@@ -5494,6 +5498,11 @@
         {
           "const": "none",
           "description": "Nothing.",
+          "type": "string"
+        },
+        {
+          "const": "held",
+          "description": "Nothing, and no end: the process takes its words through its live door and runs\nuntil stopped.",
           "type": "string"
         }
       ]

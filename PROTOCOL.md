@@ -483,7 +483,7 @@ named for it (Claude Code's `CLAUDE_ENV_FILE`).
 | `held` | `{external_id}` | a Holder, or `{look: {transcripts, strays, beyond?}}` | none |
 | `idle` | `{external_id}` | `{sample?: Sample}` | none |
 | `models` | `{}` | `{models: [Model], unlisted?: {thinking}, watch: [path]}` | `no-binary`, `refused` |
-| `start` | `{act, external_id?, cwd, folder, worktree, model?, thinking?, reads}` | `{argv, env, cwd, stdin: "words" \| "none", inbox}` | `not-found`, `no-place`, `model-missing`, `selection-unsupported`, `no-binary`, `start-failed` |
+| `start` | `{act, external_id?, cwd, folder, worktree, model?, thinking?, reads}` | `{argv, env, cwd, stdin: "words" \| "none" \| "held", inbox}` | `not-found`, `no-place`, `model-missing`, `selection-unsupported`, `no-binary`, `start-failed` |
 | `turn/read` | `{turn, stream: "stdout" \| "stderr", line, delivery?}` | `{named?, took?, ended?: {state, error?}, refused?}` | none |
 | `stop` | `{external_id, holder}` | `{stopped, proof?}` | `not-stopped` |
 | `receipt/mark` | `{external_id}` | `{mark}` | `selection-unsupported` |
@@ -545,6 +545,11 @@ outside `cwd` the turn reads. `worktree` asks for a new worktree for a fork or a
 conversation, where `facts.worktrees`. `start` checks first what it can check without a
 process (omp: that the model is an exact entry of omp's own list) and refuses before
 anything runs.
+
+With `stdin: "held"` the runtime starts the process with a standard input that never ends
+(`process/start` `held`) and discards its standard output. It hands the words through the
+plugin door (§4.4) once a copy says `hello` from that pid, and keeps the process after the
+turn.
 
 A harness that must be spoken to during a turn (Codex's app server, Claude Code's
 background jobs) gives a plan that runs the driver's own binary in a turn mode. Such a
@@ -656,7 +661,8 @@ stays. Every time is milliseconds since 1970.
 - `pid`: the harness process. `session_id`: the conversation this copy is in, a
   sub-agent's own id where it is one.
 - `mode`: `tui` or `rpc` (a person, or a program drawing for one, is at it), `json` or
-  `print` (a one-shot run, whose process ends with it).
+  `print` (a one-shot run, whose process ends with it). A process the runtime started
+  held (§4.2) says `rpc`.
 - `lead?`: `{harness, external_id}` where the copy is a sub-agent's: the conversation
   it works in. A copy whose lead it cannot name opens no door.
 - `state?`: a LiveState (§4.3), as `state` frames send it.
@@ -755,7 +761,7 @@ at least every 30 s. A person answers a card on the phone; the door carries no a
 
 | Method | Params | Result | Refusals |
 |---|---|---|---|
-| `process/start` | `{argv, env, cwd, stdin?, stdout, stderr, scope?, started?, status?}` | `{pid, process_start}` | `start-failed` |
+| `process/start` | `{argv, env, cwd, stdin?, held?, stdout, stderr, scope?, started?, status?}` | `{pid, process_start}` | `start-failed` |
 | `process/list` | `{pids?}` | `{processes: [{pid, ppid, pgid, process_start, command, args?, user, cwd?, stopped?}]}` | |
 | `process/environ` | `{pid, process_start, names}` | `{values: {name: value}}` | `not-found` |
 | `process/files` | `{pid, process_start, writing}` | `{paths}`: the files it holds open | `not-found` |
@@ -770,8 +776,10 @@ at least every 30 s. A person answers a card on the phone; the door carries no a
   where the pid still has that start, and is refused `not-found` otherwise
   (`process/signal` answers `sent: false`).
 - `process/start` starts `argv` detached, in a session and process group of its own, with
-  its whole environment `env`, standard input from the file `stdin` (none where absent)
-  and standard output and error appended to the files `stdout` and `stderr`, made 0600.
+  its whole environment `env`, standard input from the file `stdin` (none where absent;
+  where `held`, one that never ends: it neither gives bytes nor ends, and nothing outside
+  the process holds it), and standard output and error appended to the files `stdout` and
+  `stderr`, made 0600. `held` with `stdin` is refused `invalid`.
   `scope` names a service (`label`): the process runs in that service's share of the CPU,
   where the operating system has one (a systemd slice when the runtime runs under
   systemd), and as it would otherwise where it has none. `started` names `<what>` of

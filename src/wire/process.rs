@@ -28,6 +28,10 @@ pub struct Start {
     /// The file its standard input reads; absent: none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stdin: Option<PathBuf>,
+    /// Its standard input never ends; `stdin` is absent. An adapter refuses `invalid` where
+    /// both are set.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub held: bool,
     /// The file its standard output is appended to.
     pub stdout: PathBuf,
     /// The file its standard error is appended to.

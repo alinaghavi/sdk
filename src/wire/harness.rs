@@ -1102,6 +1102,9 @@ pub enum Stdin {
     Words,
     /// Nothing.
     None,
+    /// Nothing, and no end: the process takes its words through its live door and runs
+    /// until stopped.
+    Held,
 }
 
 /// What a turn's `inbox` answers when the harness took more words.
