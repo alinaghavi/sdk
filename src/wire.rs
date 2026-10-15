@@ -535,6 +535,9 @@ pub struct HostFacts {
     /// The optional methods it has, by their last word.
     #[serde(default)]
     pub optional: Vec<Optional>,
+    /// It takes `hosts/ensure`'s `source: {dockerfile}`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub builds: bool,
     /// How `hosts/channel` reaches a host.
     pub channel: Channel,
     /// The operating system inside its hosts.
@@ -580,6 +583,7 @@ pub enum Optional {
     Pause,
     Fork,
     Keepalive,
+    Expose,
 }
 
 /// How `hosts/channel` reaches a host.

@@ -52,6 +52,7 @@ impl Program for Example {
                 persist: None,
                 idle: wire::Idle::None,
                 optional: Vec::new(),
+                builds: false,
                 channel: wire::Channel::Argv,
                 os: wire::Os::Linux,
                 unavailable: None,

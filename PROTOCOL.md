@@ -204,7 +204,8 @@ A **Hook** is `{event, kind, via, says, waits?, env?}`:
  "program": {"id": "daytona", "kind": "machine", "release": "0.1.0", "label": "Daytona",
              "short": "Dt", "tint": "#1f2937"},
  "machine": {"provides": "hosts", "keeps": "filesystem", "idle": "activity",
-             "optional": ["archive", "keepalive"], "channel": "argv", "os": "linux"},
+             "optional": ["archive", "keepalive", "expose"], "builds": true, "channel": "argv",
+             "os": "linux"},
  "settings": [{"name": "DAYTONA_API_KEY", "secret": true, "required": true,
                "about": "An API key from app.daytona.io/dashboard/keys"}]}
 ```
@@ -216,8 +217,10 @@ kind's facts:
 - `hosts`: `keeps` is what survives `hosts/stop` (`filesystem`, `memory`, or
   `volume`: only the folder in `persist?`); `idle` is the vendor's own timer
   (`activity`, `ttl`, `none`); `optional` lists the optional methods it has, by their last
-  word (`archive`, `pause`, `fork`, `keepalive`); `channel` is `argv` (§5.2) or `stream`
-  (§5.3); `os` is the operating system inside its hosts (`linux`); `unavailable?` is
+  word (`archive`, `pause`, `fork`, `keepalive`, `expose`); `builds?` is true where
+  `hosts/ensure` takes a `source` of `{dockerfile}` (§5.2), absent where it does not;
+  `channel` is `argv` (§5.2) or `stream` (§5.3); `os` is the operating system inside its
+  hosts (`linux`); `unavailable?` is
   one line saying why no host of this adapter can be had from this computer, whatever
   the settings, naming what to install or change (`Daytona's channel runs ssh on this
   computer, and none is installed: …`). The runtime adds no machine of an unavailable
@@ -828,12 +831,13 @@ at least every 30 s. A person answers a card on the phone; the door carries no a
 | Method | Params | Result | Optional | Refusals |
 |---|---|---|---|---|
 | `hosts/list` | `{labels?}` | `{hosts: [{host, state, labels, created_at}]}` | | `offline`, `refused` |
-| `hosts/ensure` | `{key, source?: {snapshot} \| {image}, labels}` | `{host}`, made, or found by `key` | | `offline`, `refused`, `start-failed`, `no-place` |
+| `hosts/ensure` | `{key, source?: {snapshot} \| {image} \| {dockerfile}, labels}` | `{host}`, made, or found by `key` | | `offline`, `refused`, `start-failed`, `no-place` |
 | `hosts/start` | `{host}` | `{state}` | | `offline`, `refused`, `not-found`, `start-failed` |
 | `hosts/stop`, `hosts/delete` | `{host}` | `{state}` | | `offline`, `refused`, `not-found` |
 | `hosts/archive`, `hosts/pause` | `{host}` | `{state}` | yes | `offline`, `refused`, `not-found` |
 | `hosts/fork` | `{host}` | `{host}` | yes | `offline`, `refused`, `not-found`, `start-failed` |
 | `hosts/keepalive` | `{host}` | `{}` | yes | `offline`, `refused`, `not-found` |
+| `hosts/expose` | `{host, port}` | `{url, headers?}` | yes | `offline`, `refused`, `not-found` |
 | `hosts/put` | `{host, path, content, mode}`: base64 content | `{}` | | `offline`, `not-found` (no such host), `refused` (the bytes did not arrive whole; a partial file is removed first) |
 | `hosts/channel` | `{host, command: [string]}`: the command, its program first | `{argv, env}` or `{stream}` | | `offline`, `refused`, `not-found` |
 
@@ -843,8 +847,11 @@ at least every 30 s. A person answers a card on the phone; the door carries no a
 time); `refused`: the vendor answered no (a bad key, a quota); `not-found`: it has no such
 host.
 
-`source` absent is the vendor's default. The host, its image, its credentials and its
-network are the vendor's and its owner's; an adapter passes none of its own.
+`source` absent is the vendor's default. `{dockerfile}` is a Dockerfile's whole text, which
+the vendor builds in its owner's account, only where the facts say `builds`: the same bytes
+make the same image, built once, and a host is not answered before its build ends. The
+host, its image, its credentials and its network are the vendor's and its owner's; an
+adapter passes none of its own.
 
 `hosts/ensure` finds the host for `key` with a read that sees the vendor's own writes at
 once (a listing that lags a new host does not), so two ensures for one key, at once or one
@@ -858,6 +865,10 @@ its download, so a large file may be better fetched by the host itself over the 
 (for example with `curl`). A `hosts/put`'s content is at most 12 MiB, so its line stays
 within §2's 16 MiB. An adapter checks that a `hosts/put` wrote every byte, and removes a
 partial file before it refuses.
+
+`hosts/expose` answers a URL every other host of the adapter reaches `port` of `host` by,
+the same while the host lives, and the `headers` a request to it carries (absent: none).
+What else can reach it is the vendor's; a service behind it checks its own key.
 
 `hosts/channel` answers a local command whose standard input and output reach `command`
 in the host (`channel: argv`), or a stream the adapter carries (§5.3).
