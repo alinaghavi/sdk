@@ -743,9 +743,16 @@ forgotten.
   compaction, which the cut drops, before it. Only its own compaction is answered by the
   plugin's hook with this summary and cut, so no model runs; every other compaction passes
   the hook untouched.
-- `least` is tokens: no such cut, fewer estimated between the context's start and the cut
-  (characters / 4), or the harness declining, and nothing is done: `{from: <the context's
-  start>, forgot: 0}`.
+- Tokens before the cut are estimated from the conversation's own model: their characters
+  at its tokens per character, the growth from each of its responses to the next in one
+  context over the characters between them; characters / 4 where it counted none.
+- `least` is tokens: no such cut, fewer estimated between the context's start and the cut,
+  or the harness declining, and nothing is done: `{from: <the context's start>, forgot:
+  0}`. Nothing is done either where the provider still caches the context and the cut
+  forgets less than half of what the context would hold after it (its newest response's
+  tokens, less what the cut forgets, plus the summary): its newest response came after
+  the latest compaction, within an hour where a response of the context wrote one-hour
+  cache entries, else five minutes.
 - `from` is milliseconds since 1970, when the context starts after the ask: the cut
   entry's time where it compacted. `forgot` the tokens estimated before the cut.
 - A sub-agent's copy answers `compact` `refused`. The runtime waits 30 s for a `compact`
