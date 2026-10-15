@@ -400,6 +400,7 @@ An **Event** is one of:
 | `model` | `at, model, provider?, thinking?` |
 | `sub_agent` | `at, external_id, call?, state?: running \| finished \| failed \| interrupted, error?` |
 | `fork` | `at, parent`: every event before it is the parent's history, copied into this conversation |
+| `compacted` | `at, id, by: Compactor, tokens_before?, tokens_after?`: the harness compacted the context |
 
 - `turn` is the harness's id for the turn. A turn ends `interrupted` where the harness
   wrote no end and its process is gone, or where it was stopped (pi records `aborted`).
@@ -435,6 +436,15 @@ An **Event** is one of:
   window left after it, 0 to 1.
 - `sub_agent` is what the conversation said about one of its sub-agents: started by
   `call`, or ended.
+- `compacted`: the harness replaced the context before it with a summary. `id` is the
+  harness's for its record of it. A **Compactor** is tagged by `kind`: `harness {reason?}`
+  (on its own; `reason` is `threshold` where the context reached the harness's limit,
+  `overflow` where the model refused a call as over its limit, `idle` where it compacts a
+  conversation left idle, else the harness's own word, absent where it records none),
+  `person` (its person asked, `/compact`), `steery {compaction}` (the door's `compact`
+  ask, §4.4, by its `id`). `tokens_before` and `tokens_after` are the context's tokens just
+  before and just after, summary included, as the harness counted them; absent where it
+  records none. History a fork copied says none.
 - A **Failure** is `{kind: sign_in | rate_limit | context_full | other, line, service,
   http_status?, code?, retry_at?, provider?, model?, thinking?}`. `sign_in`: the harness
   could not sign in to its model service (a 401, or the harness's own code for it);

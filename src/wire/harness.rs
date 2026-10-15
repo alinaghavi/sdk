@@ -438,6 +438,23 @@ pub enum Event {
         at: u64,
         parent: String,
     },
+    /// The harness compacted the conversation's context: what came before is in its model's
+    /// context only as the summary that replaced it. Never said of history a fork copied.
+    Compacted {
+        at: u64,
+        /// The harness's id for its record of it: stable.
+        id: String,
+        /// Who made it compact.
+        by: Compactor,
+        /// The context's tokens just before it, as the harness counted them; absent: it
+        /// records none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tokens_before: Option<u64>,
+        /// The context's tokens just after it, summary included, as the harness counted
+        /// them; absent: it records none.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tokens_after: Option<u64>,
+    },
 }
 
 /// How a turn ended.
@@ -471,6 +488,25 @@ pub enum Count {
     Response,
     /// The running total of the whole conversation.
     Total,
+}
+
+/// Who made a harness compact a conversation's context.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum Compactor {
+    /// The harness on its own. `reason` is why, where it records it: `threshold` (the
+    /// context reached the harness's own limit), `overflow` (the model refused a call as
+    /// over its limit), `idle` (it compacts a conversation left idle), else the harness's
+    /// own word.
+    Harness {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+    /// The conversation's person asked it to (`/compact`).
+    Person,
+    /// Steery, through the door's `compact` ask (§4.4), by that ask's `id`.
+    Steery { compaction: String },
 }
 
 /// Who said words in a conversation.

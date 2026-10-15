@@ -62,6 +62,7 @@ fn main() {
         harness::TurnState,
         harness::Execution,
         harness::Count,
+        harness::Compactor,
         harness::Voice,
         harness::Clip,
         harness::Call,

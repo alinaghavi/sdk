@@ -488,6 +488,60 @@
         }
       ]
     },
+    "Compactor": {
+      "description": "Who made a harness compact a conversation's context.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "The harness on its own. `reason` is why, where it records it: `threshold` (the\ncontext reached the harness's own limit), `overflow` (the model refused a call as\nover its limit), `idle` (it compacts a conversation left idle), else the harness's\nown word.",
+          "properties": {
+            "kind": {
+              "const": "harness",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The conversation's person asked it to (`/compact`).",
+          "properties": {
+            "kind": {
+              "const": "person",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Steery, through the door's `compact` ask (§4.4), by that ask's `id`.",
+          "properties": {
+            "compaction": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "steery",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "compaction"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "Count": {
       "description": "How tokens are counted.",
       "oneOf": [
@@ -1202,6 +1256,48 @@
             "type",
             "at",
             "parent"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The harness compacted the conversation's context: what came before is in its model's\ncontext only as the summary that replaced it. Never said of history a fork copied.",
+          "properties": {
+            "at": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "by": {
+              "$ref": "#/$defs/Compactor",
+              "description": "Who made it compact."
+            },
+            "id": {
+              "description": "The harness's id for its record of it: stable.",
+              "type": "string"
+            },
+            "tokens_after": {
+              "description": "The context's tokens just after it, summary included, as the harness counted\nthem; absent: it records none.",
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "tokens_before": {
+              "description": "The context's tokens just before it, as the harness counted them; absent: it\nrecords none.",
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": {
+              "const": "compacted",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "at",
+            "id",
+            "by"
           ],
           "type": "object"
         }
@@ -5970,6 +6066,9 @@
     },
     {
       "$ref": "#/$defs/CloseHow"
+    },
+    {
+      "$ref": "#/$defs/Compactor"
     },
     {
       "$ref": "#/$defs/Count"
