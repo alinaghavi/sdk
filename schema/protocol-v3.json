@@ -1364,6 +1364,49 @@
       ],
       "type": "object"
     },
+    "Expose": {
+      "additionalProperties": false,
+      "description": "`hosts/expose`: a way for every other host of the adapter to one port of a host.",
+      "properties": {
+        "host": {
+          "description": "The adapter's id for the host.",
+          "type": "string"
+        },
+        "port": {
+          "description": "The port inside it.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "type": "object"
+    },
+    "Exposed": {
+      "additionalProperties": false,
+      "description": "The way `hosts/expose` answers: the same while the host lives.",
+      "properties": {
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "The headers a request to `url` carries.",
+          "type": "object"
+        },
+        "url": {
+          "description": "The URL that reaches the port.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
     "Failure": {
       "additionalProperties": false,
       "description": "Why a turn failed.",
@@ -2339,6 +2382,10 @@
       "additionalProperties": false,
       "description": "The facts of an adapter that makes hosts.",
       "properties": {
+        "builds": {
+          "description": "It takes `hosts/ensure`'s `source: {dockerfile}`.",
+          "type": "boolean"
+        },
         "channel": {
           "$ref": "#/$defs/Channel",
           "description": "How `hosts/channel` reaches a host."
@@ -3209,6 +3256,10 @@
           "additionalProperties": false,
           "description": "Hosts it makes, one for each conversation (§5.2).",
           "properties": {
+            "builds": {
+              "description": "It takes `hosts/ensure`'s `source: {dockerfile}`.",
+              "type": "boolean"
+            },
             "channel": {
               "$ref": "#/$defs/Channel",
               "description": "How `hosts/channel` reaches a host."
@@ -3541,7 +3592,8 @@
         "archive",
         "pause",
         "fork",
-        "keepalive"
+        "keepalive",
+        "expose"
       ],
       "type": "string"
     },
@@ -5408,6 +5460,19 @@
             "image"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A Dockerfile's whole text, which the vendor builds in its owner's account: the same\nbytes, the same build. Only where the adapter's facts say `builds`.",
+          "properties": {
+            "dockerfile": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "dockerfile"
+          ],
+          "type": "object"
         }
       ]
     },
@@ -6129,6 +6194,12 @@
     },
     {
       "$ref": "#/$defs/Exited"
+    },
+    {
+      "$ref": "#/$defs/Expose"
+    },
+    {
+      "$ref": "#/$defs/Exposed"
     },
     {
       "$ref": "#/$defs/Failure"

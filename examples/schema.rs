@@ -175,6 +175,8 @@ fn main() {
         hosts::Source,
         hosts::Named,
         hosts::State,
+        hosts::Expose,
+        hosts::Exposed,
         hosts::Put,
         hosts::Channel,
         hosts::Reach,

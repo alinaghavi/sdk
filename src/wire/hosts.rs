@@ -73,6 +73,9 @@ pub enum Source {
     Snapshot(String),
     /// A container image, by reference.
     Image(String),
+    /// A Dockerfile's whole text, which the vendor builds in its owner's account: the same
+    /// bytes, the same build. Only where the adapter's facts say `builds`.
+    Dockerfile(String),
 }
 
 /// A host, as `hosts/ensure` and `hosts/fork` answer it.
@@ -95,6 +98,29 @@ pub type Target = Named;
 pub struct State {
     /// In the vendor's own word.
     pub state: String,
+}
+
+/// `hosts/expose`: a way for every other host of the adapter to one port of a host.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Expose {
+    /// The adapter's id for the host.
+    pub host: String,
+    /// The port inside it.
+    pub port: u16,
+}
+
+/// The way `hosts/expose` answers: the same while the host lives.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Exposed {
+    /// The URL that reaches the port.
+    pub url: String,
+    /// The headers a request to `url` carries.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub headers: BTreeMap<String, String>,
 }
 
 /// `hosts/put`: write a file into a host. Its result is [`super::Empty`].

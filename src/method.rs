@@ -168,6 +168,10 @@ requests! {
     /// Keep a host from going idle, where the adapter can (§5.2).
     HostsKeepalive, HOSTS_KEEPALIVE = "hosts/keepalive": hosts::Target => wire::Empty, seconds(60),
         [OFFLINE, REFUSED, NOT_FOUND];
+    /// A URL every other host of the adapter reaches a host's port by, where the adapter can
+    /// (§5.2).
+    HostsExpose, HOSTS_EXPOSE = "hosts/expose": hosts::Expose => hosts::Exposed, seconds(60),
+        [OFFLINE, REFUSED, NOT_FOUND];
     /// Write a file into a host (§5.2).
     HostsPut, HOSTS_PUT = "hosts/put": hosts::Put => wire::Empty, seconds(300), [OFFLINE, NOT_FOUND, REFUSED];
     /// A way to a command's standard input and output in a host (§5.2).
