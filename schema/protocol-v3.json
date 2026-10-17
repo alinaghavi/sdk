@@ -5319,14 +5319,6 @@
       "additionalProperties": false,
       "description": "`setup/plan`: what setting the harness up for Steery writes.",
       "properties": {
-        "card_tools": {
-          "default": [],
-          "description": "Steery's MCP tools meant for a request card alone, which an entry may hide from\nthe agent.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "door": {
           "description": "The runtime's loopback door URL, which a `plugin` door dials.",
           "type": "string"

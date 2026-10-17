@@ -103,10 +103,6 @@ pub struct Setup {
     pub release: String,
     /// The seconds an MCP entry gives one call.
     pub timeout: u32,
-    /// Steery's MCP tools meant for a request card alone, which an entry may hide from
-    /// the agent.
-    #[serde(default)]
-    pub card_tools: Vec<String>,
 }
 
 /// The harness found here, and the entries that set it up.
