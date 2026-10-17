@@ -321,32 +321,6 @@
       ],
       "type": "object"
     },
-    "Card": {
-      "additionalProperties": false,
-      "description": "An open request card.",
-      "properties": {
-        "request": {
-          "description": "The request, as Steery's server gives it."
-        },
-        "text": {
-          "description": "Its text form.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "request",
-        "text"
-      ],
-      "type": "object"
-    },
-    "CardStatus": {
-      "description": "How a card settled.",
-      "enum": [
-        "answered",
-        "withdrawn"
-      ],
-      "type": "string"
-    },
     "Channel": {
       "description": "How `hosts/channel` reaches a host.",
       "oneOf": [
@@ -4855,36 +4829,6 @@
             "t"
           ],
           "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "description": "The conversation's request cards, for a copy that draws.",
-          "properties": {
-            "open": {
-              "description": "Every open request, newest first, at most 20.",
-              "items": {
-                "$ref": "#/$defs/Card"
-              },
-              "type": "array"
-            },
-            "settled": {
-              "description": "Cards settled since the last frame.",
-              "items": {
-                "$ref": "#/$defs/SettledCard"
-              },
-              "type": "array"
-            },
-            "t": {
-              "const": "cards",
-              "type": "string"
-            }
-          },
-          "required": [
-            "t",
-            "open",
-            "settled"
-          ],
-          "type": "object"
         }
       ]
     },
@@ -5283,35 +5227,6 @@
       "required": [
         "name",
         "about"
-      ],
-      "type": "object"
-    },
-    "SettledCard": {
-      "additionalProperties": false,
-      "description": "A card settled since the last frame.",
-      "properties": {
-        "by": {
-          "description": "Who answered it, where known.",
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "reason": {
-          "description": "Why it was withdrawn.",
-          "type": "string"
-        },
-        "status": {
-          "$ref": "#/$defs/CardStatus"
-        },
-        "title": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "status"
       ],
       "type": "object"
     },
@@ -6107,12 +6022,6 @@
       "$ref": "#/$defs/Call"
     },
     {
-      "$ref": "#/$defs/Card"
-    },
-    {
-      "$ref": "#/$defs/CardStatus"
-    },
-    {
       "$ref": "#/$defs/Channel"
     },
     {
@@ -6576,9 +6485,6 @@
     },
     {
       "$ref": "#/$defs/Setting"
-    },
-    {
-      "$ref": "#/$defs/SettledCard"
     },
     {
       "$ref": "#/$defs/Setup"

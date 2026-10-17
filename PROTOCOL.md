@@ -66,8 +66,8 @@ Three rules hold for every program:
   exactly the fields this document gives it. A field it does not define is an error:
   a program answers such params with code `-32602`, and the runtime reads such a result
   as `refused`. Values the harness or a person wrote (a tool's `input`, a hook's
-  `document`, an entry's `value`, a card's `request`) are any JSON and are passed as they
-  came. An optional field (marked `?`) is absent, never `null`; `null` is a value only
+  `document`, an entry's `value`) are any JSON and are passed as they came. An optional
+  field (marked `?`) is absent, never `null`; `null` is a value only
   where a row names it.
 - **Times** are milliseconds since 1970, UTC, as integers. **Paths** are absolute.
   **Bytes** are base64 (standard alphabet, padded).
@@ -654,7 +654,7 @@ carries:
 A conversation is idle where `idle` is true, no turn runs, nothing is pending, `typing`
 is false, and it is neither compacting nor retrying.
 
-### 4.4 The plugin door, version 1
+### 4.4 The plugin door, version 2
 
 A plugin door is a WebSocket the harness's plugin dials on the runtime's loopback
 listener, at the `door` URL `setup/plan` gave (`ws://127.0.0.1:<port>/door`). It carries no
@@ -667,7 +667,7 @@ stays. Every time is milliseconds since 1970.
 
 **Hello.** The plugin's first frame, within 5 s:
 
-`{t: "hello", door: 1, harness, pid, session_id, mode, lead?, state?}`
+`{t: "hello", door: 2, harness, pid, session_id, mode, lead?, state?}`
 
 - `door`: the door version the plugin speaks.
 - `harness`: the id of a driver whose `facts.door` is `plugin`.
@@ -680,7 +680,7 @@ stays. Every time is milliseconds since 1970.
   it works in. A copy whose lead it cannot name opens no door.
 - `state?`: a LiveState (§4.3), as `state` frames send it.
 
-The runtime answers `{t: "welcome", door: 1}`, or closes with a code. A plugin that is
+The runtime answers `{t: "welcome", door: 2}`, or closes with a code. A plugin that is
 welcomed to another door version sends nothing more and waits for the runtime to close.
 
 | Code | Why | The plugin |
@@ -699,9 +699,8 @@ which it heard nothing for 30 s, or to which a send takes over 30 s. The plugin 
 pings and sends none. A drop answers every ask in hand `no-answer`.
 
 **Who a copy is.** A copy with a `lead` is a sub-agent's: it takes no words, no pick and
-no stop, draws no cards, and its moments are filed under its lead's conversation. A copy
-without one takes words and picks where its mode is `tui` or `rpc` or a turn runs, and
-draws cards where its mode is `tui` or `rpc`.
+no stop, and its moments are filed under its lead's conversation. A copy without one
+takes words and picks where its mode is `tui` or `rpc` or a turn runs.
 
 **Plugin to runtime.**
 
@@ -768,12 +767,6 @@ forgotten.
   0600. A copy that cannot read the file writes nothing.
 - `refused` answers an op the copy does not know, an ask it cannot read, and words asked
   of a one-shot run before its own turn.
-
-**Cards.** `{t: "cards", open: [{request, text}], settled: [{id, title, status: answered
-| withdrawn, by?, reason?}]}`, sent to a copy that draws: `open` is every open request of
-the conversation, newest first, at most 20, each with its text form; `settled` the cards
-settled since the last frame, once. The runtime sends it on welcome, on every change, and
-at least every 30 s. A person answers a card on the phone; the door carries no answer.
 
 ## 5. Adapter methods
 

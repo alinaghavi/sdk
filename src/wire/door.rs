@@ -1,4 +1,4 @@
-//! The plugin door, version 1 (PROTOCOL.md §4.4): WebSocket text frames between Steery's
+//! The plugin door, version 2 (PROTOCOL.md §4.4): WebSocket text frames between Steery's
 //! plugin in a harness and the runtime's loopback listener, each tagged by `t`.
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde_json::Value;
 use super::harness::{LiveState, SessionRef};
 
 /// The door version this crate speaks.
-pub const DOOR: u32 = 1;
+pub const DOOR: u32 = 2;
 /// The path a plugin dials on the runtime's loopback listener.
 pub const PATH: &str = "/door";
 /// The longest frame either side reads.
@@ -117,13 +117,6 @@ pub enum RuntimeFrame {
     Answer { id: String, ok: Spoken },
     /// Something the runtime asks of the copy.
     Ask(Ask),
-    /// The conversation's request cards, for a copy that draws.
-    Cards {
-        /// Every open request, newest first, at most 20.
-        open: Vec<Card>,
-        /// Cards settled since the last frame.
-        settled: Vec<SettledCard>,
-    },
 }
 
 /// The runtime's answer to a moment or a settle.
@@ -214,40 +207,4 @@ pub mod refusal {
     pub const ENDING: &str = "ending";
     /// The turn running is not one the given `say` began.
     pub const OTHER_TURN: &str = "other-turn";
-}
-
-/// An open request card.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(deny_unknown_fields)]
-pub struct Card {
-    /// The request, as Steery's server gives it.
-    pub request: Value,
-    /// Its text form.
-    pub text: String,
-}
-
-/// A card settled since the last frame.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(deny_unknown_fields)]
-pub struct SettledCard {
-    pub id: String,
-    pub title: String,
-    pub status: CardStatus,
-    /// Who answered it, where known.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub by: Option<String>,
-    /// Why it was withdrawn.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reason: Option<String>,
-}
-
-/// How a card settled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum CardStatus {
-    Answered,
-    Withdrawn,
 }
