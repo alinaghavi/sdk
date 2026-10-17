@@ -654,7 +654,7 @@ carries:
 A conversation is idle where `idle` is true, no turn runs, nothing is pending, `typing`
 is false, and it is neither compacting nor retrying.
 
-### 4.4 The plugin door, version 2
+### 4.4 The plugin door, version 1
 
 A plugin door is a WebSocket the harness's plugin dials on the runtime's loopback
 listener, at the `door` URL `setup/plan` gave (`ws://127.0.0.1:<port>/door`). It carries no
@@ -667,7 +667,7 @@ stays. Every time is milliseconds since 1970.
 
 **Hello.** The plugin's first frame, within 5 s:
 
-`{t: "hello", door: 2, harness, pid, session_id, mode, lead?, state?}`
+`{t: "hello", door: 1, harness, pid, session_id, mode, lead?, state?}`
 
 - `door`: the door version the plugin speaks.
 - `harness`: the id of a driver whose `facts.door` is `plugin`.
@@ -680,7 +680,7 @@ stays. Every time is milliseconds since 1970.
   it works in. A copy whose lead it cannot name opens no door.
 - `state?`: a LiveState (§4.3), as `state` frames send it.
 
-The runtime answers `{t: "welcome", door: 2}`, or closes with a code. A plugin that is
+The runtime answers `{t: "welcome", door: 1}`, or closes with a code. A plugin that is
 welcomed to another door version sends nothing more and waits for the runtime to close.
 
 | Code | Why | The plugin |

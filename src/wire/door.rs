@@ -1,4 +1,4 @@
-//! The plugin door, version 2 (PROTOCOL.md §4.4): WebSocket text frames between Steery's
+//! The plugin door, version 1 (PROTOCOL.md §4.4): WebSocket text frames between Steery's
 //! plugin in a harness and the runtime's loopback listener, each tagged by `t`.
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde_json::Value;
 use super::harness::{LiveState, SessionRef};
 
 /// The door version this crate speaks.
-pub const DOOR: u32 = 2;
+pub const DOOR: u32 = 1;
 /// The path a plugin dials on the runtime's loopback listener.
 pub const PATH: &str = "/door";
 /// The longest frame either side reads.
