@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::harness::{LiveState, SessionRef};
+use super::harness::{LiveState, Record, SessionRef};
 
 /// The door version this crate speaks.
 pub const DOOR: u32 = 1;
@@ -12,6 +12,9 @@ pub const DOOR: u32 = 1;
 pub const PATH: &str = "/door";
 /// The longest frame either side reads.
 pub const FRAME_MAX: usize = 16 << 20;
+/// The most bytes of records one `entries` frame carries, and the largest record sent with
+/// its value: a larger one goes as its id alone.
+pub const RECORDS_MAX: usize = 8 << 20;
 /// The variable naming the `compact` ask a one-shot run answers before its own turn.
 pub const COMPACT_VAR: &str = "STEERY_COMPACT";
 /// The file beside that ask its answer frame is written to.
@@ -82,6 +85,18 @@ pub enum PluginFrame {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         error: Option<String>,
     },
+    /// The harness's records after `after`, in the order it appended them; sent only on a
+    /// connection welcomed with `entries`.
+    Entries {
+        /// The id of the record before the first one here; absent: these start at the
+        /// conversation's first record.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        after: Option<String>,
+        records: Vec<Record>,
+    },
+    /// The copy cannot continue from `welcome.entries.after`: this connection carries no
+    /// entries.
+    Lost { why: String },
 }
 
 /// Who is at a plugin's harness.
@@ -111,12 +126,26 @@ impl DoorMode {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(tag = "t", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RuntimeFrame {
-    /// The hello was taken.
-    Welcome { door: u32 },
+    /// The hello was taken. `entries`: this runtime takes the harness's records.
+    Welcome {
+        door: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        entries: Option<DoorEntries>,
+    },
     /// The answer to a moment or a settle.
     Answer { id: String, ok: Spoken },
     /// Something the runtime asks of the copy.
     Ask(Ask),
+}
+
+/// Where a welcomed copy starts its `entries` frames.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct DoorEntries {
+    /// The id of the last record the runtime holds; absent: from the first record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
 }
 
 /// The runtime's answer to a moment or a settle.

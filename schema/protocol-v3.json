@@ -702,6 +702,17 @@
       ],
       "type": "object"
     },
+    "DoorEntries": {
+      "additionalProperties": false,
+      "description": "Where a welcomed copy starts its `entries` frames.",
+      "properties": {
+        "after": {
+          "description": "The id of the last record the runtime holds; absent: from the first record.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "DoorMode": {
       "description": "Who is at a plugin's harness.",
       "oneOf": [
@@ -1281,6 +1292,10 @@
       "additionalProperties": false,
       "description": "The events `sessions/read` read.",
       "properties": {
+        "after": {
+          "description": "The id of the newest record such that every record written before it was read:\nthe plugin door's `welcome.entries.after` (§4.4). Absent after a `tail` read, or\nwhere no record with an id was read.",
+          "type": "string"
+        },
         "cursor": {
           "description": "Where this read ended, for the next: opaque, between whole records.",
           "type": "string"
@@ -1518,6 +1533,72 @@
         "pid",
         "process_start",
         "writing"
+      ],
+      "type": "object"
+    },
+    "Fold": {
+      "additionalProperties": false,
+      "description": "`sessions/fold`: the events of records the harness's plugin sent over its door (§4.4),\nfolded as `sessions/read` folds the transcript's.",
+      "properties": {
+        "cursor": {
+          "description": "Where the last fold ended; absent: the records start at the conversation's first.",
+          "type": "string"
+        },
+        "external_id": {
+          "description": "The conversation.",
+          "type": "string"
+        },
+        "quiet": {
+          "description": "Milliseconds since the newest record arrived.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "records": {
+          "description": "The records after it, in the order the harness appended them.",
+          "items": {
+            "$ref": "#/$defs/Record"
+          },
+          "type": "array"
+        },
+        "sub_agent": {
+          "description": "One of its sub-agents, folded instead.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "external_id",
+        "records",
+        "quiet"
+      ],
+      "type": "object"
+    },
+    "Folded": {
+      "additionalProperties": false,
+      "description": "The events `sessions/fold` folded.",
+      "properties": {
+        "consumed": {
+          "description": "How many of the leading records these events say; the rest come again next fold.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cursor": {
+          "description": "Where this fold ended, for the next fold or a `sessions/read`: opaque.",
+          "type": "string"
+        },
+        "events": {
+          "description": "Each one, in order.",
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "cursor",
+        "events",
+        "consumed"
       ],
       "type": "object"
     },
@@ -3941,6 +4022,49 @@
             "id"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The harness's records after `after`, in the order it appended them; sent only on a\nconnection welcomed with `entries`.",
+          "properties": {
+            "after": {
+              "description": "The id of the record before the first one here; absent: these start at the\nconversation's first record.",
+              "type": "string"
+            },
+            "records": {
+              "items": {
+                "$ref": "#/$defs/Record"
+              },
+              "type": "array"
+            },
+            "t": {
+              "const": "entries",
+              "type": "string"
+            }
+          },
+          "required": [
+            "t",
+            "records"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The copy cannot continue from `welcome.entries.after`: this connection carries no\nentries.",
+          "properties": {
+            "t": {
+              "const": "lost",
+              "type": "string"
+            },
+            "why": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "t",
+            "why"
+          ],
+          "type": "object"
         }
       ]
     },
@@ -4360,7 +4484,7 @@
       "description": "`sessions/read`: a conversation's events after a cursor.",
       "properties": {
         "cursor": {
-          "description": "Where the last read ended; absent: from the beginning.",
+          "description": "Where the last read or fold ended; absent: from the beginning.",
           "type": "string"
         },
         "external_id": {
@@ -4623,6 +4747,23 @@
       ],
       "type": "object"
     },
+    "Record": {
+      "additionalProperties": false,
+      "description": "One record of a conversation as the harness keeps it: its id, and its value verbatim.",
+      "properties": {
+        "id": {
+          "description": "The harness's id for it.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The record; absent where it is over [`super::door::RECORDS_MAX`]: the driver reads\nit from the transcript by `id`."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
     "Runtime": {
       "additionalProperties": false,
       "description": "The runtime a program runs under.",
@@ -4652,12 +4793,19 @@
       "oneOf": [
         {
           "additionalProperties": false,
-          "description": "The hello was taken.",
+          "description": "The hello was taken. `entries`: this runtime takes the harness's records.",
           "properties": {
             "door": {
               "format": "uint32",
               "minimum": 0,
               "type": "integer"
+            },
+            "entries": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/DoorEntries"
+                }
+              ]
             },
             "t": {
               "const": "welcome",
@@ -6065,6 +6213,9 @@
       "$ref": "#/$defs/DoorCompacted"
     },
     {
+      "$ref": "#/$defs/DoorEntries"
+    },
+    {
       "$ref": "#/$defs/DoorMode"
     },
     {
@@ -6120,6 +6271,12 @@
     },
     {
       "$ref": "#/$defs/Files"
+    },
+    {
+      "$ref": "#/$defs/Fold"
+    },
+    {
+      "$ref": "#/$defs/Folded"
     },
     {
       "$ref": "#/$defs/Format"
@@ -6438,6 +6595,9 @@
     },
     {
       "$ref": "#/$defs/ReceiptMark"
+    },
+    {
+      "$ref": "#/$defs/Record"
     },
     {
       "$ref": "#/$defs/Runtime"

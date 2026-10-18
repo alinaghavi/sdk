@@ -310,7 +310,7 @@ pub struct Read {
     /// One of its sub-agents, read instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sub_agent: Option<String>,
-    /// Where the last read ended; absent: from the beginning.
+    /// Where the last read or fold ended; absent: from the beginning.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
     /// Read only the newest records within this many bytes of the end.
@@ -333,6 +333,57 @@ pub struct Events {
     pub reset: bool,
     /// These start at the conversation's beginning.
     pub whole: bool,
+    /// The id of the newest record such that every record written before it was read:
+    /// the plugin door's `welcome.entries.after` (§4.4). Absent after a `tail` read, or
+    /// where no record with an id was read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
+}
+
+/// `sessions/fold`: the events of records the harness's plugin sent over its door (§4.4),
+/// folded as `sessions/read` folds the transcript's.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Fold {
+    /// The conversation.
+    pub external_id: String,
+    /// One of its sub-agents, folded instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sub_agent: Option<String>,
+    /// Where the last fold ended; absent: the records start at the conversation's first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
+    /// The records after it, in the order the harness appended them.
+    pub records: Vec<Record>,
+    /// Milliseconds since the newest record arrived.
+    pub quiet: u64,
+}
+
+/// One record of a conversation as the harness keeps it: its id, and its value verbatim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Record {
+    /// The harness's id for it.
+    pub id: String,
+    /// The record; absent where it is over [`super::door::RECORDS_MAX`]: the driver reads
+    /// it from the transcript by `id`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<Value>,
+}
+
+/// The events `sessions/fold` folded.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Folded {
+    /// Where this fold ended, for the next fold or a `sessions/read`: opaque.
+    pub cursor: String,
+    /// Each one, in order.
+    pub events: Vec<Event>,
+    /// How many of the leading records these events say; the rest come again next fold.
+    pub consumed: u32,
 }
 
 /// One thing a conversation did.

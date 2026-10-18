@@ -298,7 +298,8 @@ absent.
 | `setup/plan` | `{mcp_url, skill, hook, door, release, timeout}` | `{found?: Found, refused?, entries: [Entry], notes: [string], install?: {argv, about}}` |
 | `sessions/list` | `{seen_since?, transcripts: [path]}` | `{sessions: [Session], excluded: [string], complete}` |
 | `sessions/locate` | `{external_id}` | `{session: Session}`; refused `not-found` |
-| `sessions/read` | `{external_id, sub_agent?, cursor?, tail?}` | `{cursor, events: [Event], more, reset, whole}` |
+| `sessions/read` | `{external_id, sub_agent?, cursor?, tail?}` | `{cursor, events: [Event], more, reset, whole, after?}` |
+| `sessions/fold` | `{external_id, sub_agent?, cursor?, records: [Record], quiet}` | `{cursor, events: [Event], consumed}`; refused `selection-unsupported` |
 | `hook/read` | `{event, document, env}` | `{moment?: Moment}` |
 | `hook/answer` | `{event, document, env, answer: Answer}` | `{stdout, exit_code, append?: {path, text}}` |
 
@@ -387,6 +388,33 @@ after `cursor`:
   on a branch left behind too: a driver gives them as `tokens` events with `count:
   response` on the history it has now, so they are counted once.
 - `whole`: the events start at the conversation's beginning.
+- `after`: the id of the newest record such that every record written before it was read
+  (on a tree, every record of the history it has now up to it, and every other one
+  written before it): the plugin door's `welcome.entries.after` (§4.4) where the runtime
+  goes back to the door. Absent after a `tail` read, and where no record with an id was
+  read.
+- `cursor` may be one `sessions/fold` answered: the read goes on after the last record
+  that fold consumed, where the transcript holds it on the history it has now; where it
+  holds it off that history, `reset`; where it holds it not yet, no events.
+
+**`sessions/fold`** answers the events of records a driver whose `facts.door` is `plugin`
+was given from its plugin's `entries` frames (§4.4), folded exactly as `sessions/read`
+folds the same records from the transcript, so either feeds one conversation's events
+with the same ids. A driver whose door is not `plugin` refuses `selection-unsupported`.
+
+- A **Record** is `{id, value?}`: the harness's id for one of its records, and the record
+  as the harness keeps it. `value` is absent for a record over 8 MiB: the driver reads
+  that one record from the transcript by `id`.
+- `records` follow `cursor` (absent: they start at the conversation's first record), in
+  the order the harness appended them, every branch of a tree included: each response is
+  folded once, and a move to another branch needs no `reset`.
+- `quiet`: milliseconds since the newest record arrived. A driver that holds back a
+  record until more follow (a failed request the harness may retry) holds it while
+  `quiet` is short, as `sessions/read` holds it while the transcript is new.
+- `consumed`: how many of the leading records the events say. The others are given
+  again, with the records after them, to the next fold from `cursor`.
+- `cursor` is opaque, survives a restart of either side, and is also a `sessions/read`
+  cursor.
 
 An **Event** is one of:
 
@@ -682,8 +710,10 @@ stays. Every time is milliseconds since 1970.
   it works in. A copy whose lead it cannot name opens no door.
 - `state?`: a LiveState (§4.3), as `state` frames send it.
 
-The runtime answers `{t: "welcome", door: 1}`, or closes with a code. A plugin that is
-welcomed to another door version sends nothing more and waits for the runtime to close.
+The runtime answers `{t: "welcome", door: 1, entries?: {after?}}`, or closes with a code.
+A plugin that is welcomed to another door version sends nothing more and waits for the
+runtime to close. `entries` is present where the runtime takes the harness's records:
+`after` the id of the last record it holds, absent to start at the conversation's first.
 
 | Code | Why | The plugin |
 |---|---|---|
@@ -712,11 +742,23 @@ takes words and picks where its mode is `tui` or `rpc` or a turn runs.
 | `moment` | `id, event, document`: a moment of a hook `via: door`; `event` its `Hook.event`, `document` the harness's hook payload as the plugin got it, which the runtime reads with `hook/read` (§4.1) | `{t: "answer", id, ok: {say?}}`, in order, per conversation |
 | `settle` | `id, asked, parked, waiting, continued`: a turn of its own ended; the turn asked its person something, was parked, waits on a Steery request, or was already kept going once | `{t: "answer", id, ok: {say?}}`: where `say`, the plugin keeps the agent going with it. The plugin waits 1 s for it, then lets the turn end. |
 | `answer` | `id, ok`, the op's answer below, or `id, refused, error?`: to an ask | |
+| `entries` | `after?, records: [Record]`: the harness's records (§4.1), in the order it appended them; `after` the id of the record before the first one here, absent where they start at the conversation's first | nothing |
+| `lost` | `why`: the copy cannot continue from `welcome.entries.after`; this connection carries no entries | nothing |
 
 A plugin keeps the moments it has not had answered, at most 256, and sends them again on
 its next connection; the runtime reads a moment `id` once. It waits for a moment's answer
 only as long as its harness lets it (a prompt 1.5 s, a call 0.5 s), then goes on without
 it.
+
+**Entries.** Only a copy welcomed with `entries` sends them, every record from after
+`welcome.entries.after`, then each new one as the harness appends it; a sub-agent's copy
+sends its own conversation's. The copy keeps no records of its own: it sends from the
+harness's memory of the conversation, so it sends `lost` where that memory no longer
+reaches back to `after`. A frame carries at most 8 MiB of records; a record over 8 MiB
+goes as `{id}` alone, and the driver reads it from the transcript. Each frame's `after`
+is the last record id the copy sent before it, so the runtime takes a frame only where
+`after` is the last id it took (the first frame's, the welcome's), and drops this
+connection's entries at the first that is not.
 
 **Runtime to plugin.** `{t: "ask", id, op, …}`, answered by an `answer` frame with the
 same `id`: `ok` is the answer below, `refused` one of the refusals and `error` the
@@ -1128,7 +1170,7 @@ reaches the person. The plugin door adds two words of its own (§4.4), defined i
 |---|---|
 | `initialize`, `shutdown`, `host/hello` | 10 s |
 | `setup/plan`, `models`, `sessions/list` | 30 s |
-| `sessions/read`, `sessions/locate`, `hook/read`, `hook/answer`, `held`, `start`, `turn/read`, `terminal`, `reader`, `reader/read`, `receipt/mark` | 10 s |
+| `sessions/read`, `sessions/fold`, `sessions/locate`, `hook/read`, `hook/answer`, `held`, `start`, `turn/read`, `terminal`, `reader`, `reader/read`, `receipt/mark` | 10 s |
 | `idle`, `receipt/find` | 20 s |
 | `say`, `pick` | 10 s |
 | `stop` | 2.8 s |
@@ -1141,6 +1183,9 @@ reaches the person. The plugin door adds two words of its own (§4.4), defined i
 | `stream/close` | 10 s |
 | `host/fs/*`, `host/programs`, `host/dial`, `host/ping` | 30 s |
 | `host/call` | the bound of the method it carries, and 5 s |
+
+Records go in batches of at most 8 MiB (`door::RECORDS_MAX`): a door `entries` frame, and
+the `records` of one `sessions/fold`, so each stays within its 16 MiB frame or line.
 
 ## 10. Versions
 
