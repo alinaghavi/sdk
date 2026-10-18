@@ -1276,6 +1276,10 @@ pub struct Reader {
     /// The model, as the harness spells it; absent: the harness's own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// The thinking level, as the driver's `models` spells it for that model; absent: the
+    /// driver's own for a read. One the harness refuses is `selection-unsupported`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
     /// The tools it may use.
     pub tools: ReaderTools,
     /// The folder it runs in.

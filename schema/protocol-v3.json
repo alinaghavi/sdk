@@ -4418,6 +4418,10 @@
           "description": "The instructions; absent: the harness's own.",
           "type": "string"
         },
+        "thinking": {
+          "description": "The thinking level, as the driver's `models` spells it for that model; absent: the\ndriver's own for a read. One the harness refuses is `selection-unsupported`.",
+          "type": "string"
+        },
         "tools": {
           "$ref": "#/$defs/ReaderTools",
           "description": "The tools it may use."

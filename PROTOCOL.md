@@ -500,7 +500,7 @@ named for it (Claude Code's `CLAUDE_ENV_FILE`).
 | `stop` | `{external_id, holder}` | `{stopped, proof?}` | `not-stopped` |
 | `receipt/mark` | `{external_id}` | `{mark}` | `selection-unsupported` |
 | `receipt/find` | `{external_id, mark, delivery}` | `{found, owner?}` | `refused` |
-| `reader` | `{system?, model?, tools: "none" \| "read", cwd, asked}` | `{argv, env, cwd, stdin: "words" \| "none", files: [{path, content}], read: "whole" \| "events"}` | `no-binary`, `model-missing` |
+| `reader` | `{system?, model?, thinking?, tools: "none" \| "read", cwd, asked}` | `{argv, env, cwd, stdin: "words" \| "none", files: [{path, content}], read: "whole" \| "events"}` | `no-binary`, `model-missing`, `selection-unsupported` |
 | `reader/read` | `{output}` | `{text}` | `no-answer` |
 | `terminal` | `{external_id, cwd, holder?}` | `{command, app?, line?}` | `not-found` |
 
@@ -599,7 +599,9 @@ took them stays the receipt, and the mark is only looked after when it gave none
 that `owner` token. Two inputs carrying it is `refused`. Both change nothing.
 
 **`reader`** plans a one-shot read: `system` the instructions (absent: the harness's
-own), `model` (absent: the harness's own, where `harness.reader.unnamed`), `tools`, `cwd` (a private folder, or
+own), `model` (absent: the harness's own, where `harness.reader.unnamed`), `thinking` (a
+level `models` lists for that model; absent: the driver's own for a read; one the harness
+refuses is `selection-unsupported`), `tools`, `cwd` (a private folder, or
 the place being looked at), and `asked`, the text read. The runtime writes `files`
 (paths relative to `cwd`) first, gives `asked` on standard input where `stdin` is
 `words`, ends the read after 240 s, and reads at most 512 KiB of output: `whole` is the
