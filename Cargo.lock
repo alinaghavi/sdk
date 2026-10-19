@@ -188,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "steery-sdk"
-version = "3.7.0"
+version = "3.7.1"
 dependencies = [
  "libc",
  "schemars",
